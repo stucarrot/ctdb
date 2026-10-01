@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>기록</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{bg:'var(--bg)',sf:'var(--sf)',tx:'var(--tx)',mu:'var(--mu)',bd:'var(--bd)',ac:'var(--ac)'}}}}</script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+:root{--bg:#fdf6e3;--sf:#eee8d5;--tx:#073642;--mu:#657b83;--bd:#e3dcc5;--ac:#859900}
+:root[data-t=dark]{--bg:#002b36;--sf:#073642;--tx:#eee8d5;--mu:#93a1a1;--bd:#12495a}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-weight:300;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,.hd{letter-spacing:-.02em;font-weight:500}
+@keyframes f{from{opacity:0}to{opacity:1}}.fade{animation:f .18s ease}
+@media(prefers-reduced-motion:reduce){.fade{animation:none}}
+input,select,textarea{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;width:100%;font-weight:300;color:var(--tx);outline:none}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:1px solid var(--ac)}
+button{transition:background .15s,color .15s,opacity .15s}
+</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState:S,useEffect:E,useMemo:M,useRef:R}=React;
+const P={play:'<polygon points="6 3 20 12 6 21 6 3"/>',pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',stop:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',check:'<path d="M20 6 9 17l-5-5"/>',plan:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',ref:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',plus:'<path d="M5 12h14M12 5v14"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',lib:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',set:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',star:'<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',cl:'<path d="m15 18-6-6 6-6"/>',cr:'<path d="m9 18 6-6-6-6"/>',tr:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',ul:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>'};
+const Ic=({n,s=18,c='',f})=><svg width={s} height={s} viewBox="0 0 24 24" fill={f?'currentColor':'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={c} dangerouslySetInnerHTML={{__html:P[n]}}/>;
+const ST=[{k:'playing',l:'감상중',i:'play'},{k:'paused',l:'일시정지',i:'pause'},{k:'dropped',l:'중단',i:'stop'},{k:'done',l:'완료',i:'check'},{k:'planned',l:'예정',i:'plan'},{k:'ref',l:'참고용',i:'ref'}];
+const stOf=k=>ST.find(s=>s.k===k)||ST[4];
+const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today=()=>fmt(new Date());
+const addDay=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return fmt(d)};
+const addMon=(s,n)=>{const[y,m]=s.split('-').map(Number);return fmt(new Date(y,m-1+n,1)).slice(0,7)};
+const dd=(a,b)=>Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/864e5);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const load=(k,d)=>{try{return{...d,...JSON.parse(localStorage.getItem(k))}}catch(e){return d}};
+const dateOf=i=>i.finishedAt||i.startedAt||'';
+const WD=['일','월','화','수','목','금','토'];
+
+/* ---- 태그: 영화/드라마=TMDB(레터박스드와 동일) 장르, 책=KDC 10대분류 ---- */
+const MG={28:'액션',12:'모험',16:'애니메이션',35:'코미디',80:'범죄',99:'다큐멘터리',18:'드라마',10751:'가족',14:'판타지',36:'역사',27:'공포',10402:'음악',9648:'미스터리',10749:'로맨스',878:'SF',53:'스릴러',10770:'TV 영화',10752:'전쟁',37:'서부',10759:'액션·모험',10762:'키즈',10763:'뉴스',10764:'리얼리티',10765:'SF·판타지',10766:'연속극',10767:'토크',10768:'전쟁·정치'};
+const KDC=['총류','철학','종교','사회과학','자연과학','기술과학','예술','언어','문학','역사'];
+const TAGS={book:KDC,movie:[28,12,16,35,80,99,18,10751,14,36,27,10402,9648,10749,878,53,10770,10752,37].map(k=>MG[k]),drama:[10759,16,35,80,99,18,10751,10762,9648,10763,10764,10765,10766,10767,10768,37].map(k=>MG[k])};
+const gt=ids=>(ids||[]).map(k=>MG[k]).filter(Boolean);
+const kdc=d=>{const n=String(d.SUBJECT||d.KDC||'').trim();return /^\d/.test(n)?[KDC[+n[0]]]:[]};
+/* ---- 검색 provider (여기에 추가하면 UI에 자동 반영) ---- */
+const px=(c,u)=>c.proxy?c.proxy+encodeURIComponent(u):u;
+const PROV={
+ nlk:{l:'국립중앙도서관',t:['book'],key:'nlk',async search(q,c){
+  const u=`https://www.nl.go.kr/seoji/SearchApi.do?cert_key=${c.nlk}&result_style=json&page_no=1&page_size=15&title=${encodeURIComponent(q)}`;
+  const r=await(await fetch(px(c,u))).json();
+  return(r.docs||[]).map(d=>({title:d.TITLE,creator:d.AUTHOR,year:(d.PUBLISH_PREDATE||'').slice(0,4),cover:d.TITLE_URL||'',extId:d.EA_ISBN||'',tags:kdc(d),source:'nlk'}))}},
+ tmdb:{l:'TMDB',t:['movie'],key:'tmdb',async search(q,c){
+  const u=`https://api.themoviedb.org/3/search/movie?api_key=${c.tmdb}&language=ko-KR&query=${encodeURIComponent(q)}`;
+  const r=await(await fetch(px(c,u))).json();
+  return(r.results||[]).slice(0,15).map(d=>({title:d.title,creator:'',year:(d.release_date||'').slice(0,4),tags:gt(d.genre_ids),cover:d.poster_path?'https://image.tmdb.org/t/p/w342'+d.poster_path:'',extId:String(d.id),source:'tmdb'}))}}
+};
+
+PROV.tmdbtv={l:'TMDB',t:['drama'],key:'tmdb',async search(q,c){
+ const u=`https://api.themoviedb.org/3/search/tv?api_key=${c.tmdb}&language=ko-KR&query=${encodeURIComponent(q)}`;
+ const r=await(await fetch(px(c,u))).json();
+ return(r.results||[]).slice(0,15).map(d=>({title:d.name,creator:'',year:(d.first_air_date||'').slice(0,4),tags:gt(d.genre_ids),cover:d.poster_path?'https://image.tmdb.org/t/p/w342'+d.poster_path:'',extId:String(d.id),source:'tmdb'}))}};
+/* ---- CSV ---- */
+const COLS=['id','type','title','creator','year','status','rating','startedAt','finishedAt','note','cover','source','extId','tags','notes'];
+const pj=v=>{if(Array.isArray(v))return v;try{return JSON.parse(v)||[]}catch(e){return[]}};
+const csvEsc=v=>{v=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const toCSV=items=>'\ufeff'+[COLS.join(','),...items.map(i=>COLS.map(c=>csvEsc(i[c])).join(','))].join('\r\n');
+const parseCSV=t=>{t=t.replace(/^\ufeff/,'');const rows=[];let r=[],v='',q=false;
+ for(let i=0;i<t.length;i++){const c=t[i];
+  if(q){if(c=='"'){if(t[i+1]=='"'){v+='"';i++}else q=false}else v+=c}
+  else if(c=='"')q=true;else if(c==','){r.push(v);v=''}
+  else if(c=='\n'||c=='\r'){if(c=='\r'&&t[i+1]=='\n')i++;r.push(v);v='';rows.push(r);r=[]}else v+=c}
+ if(v||r.length){r.push(v);rows.push(r)}
+ const h=rows.shift()||[];return rows.filter(x=>x.some(Boolean)).map(x=>Object.fromEntries(h.map((k,i)=>[k.trim(),x[i]||''])))};
+const fromRows=(rows,types)=>rows.map(o=>{
+ if('Letterboxd URI' in o)return{id:uid(),type:'movie',title:o.Name,creator:'',year:o.Year,status:'done',rating:o.Rating?Math.round(+o.Rating):0,startedAt:'',finishedAt:o.Date||o['Watched Date']||'',note:'',cover:'',source:'letterboxd',extId:o['Letterboxd URI']};
+ return{...o,id:o.id||uid(),type:o.type||types[0].id,status:o.status||'planned',rating:+o.rating||0,tags:pj(o.tags),notes:pj(o.notes)}}).filter(i=>i.title);
+const dl=(name,txt,mime)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;a.click()};
+
+/* ---- 공통 UI ---- */
+const Cover=({it,c=''})=>it.cover?<img src={it.cover} alt="" loading="lazy" className={'object-cover bg-sf rounded-md aspect-[2/3] '+c} onError={e=>e.target.style.visibility='hidden'}/>
+ :<div className={'bg-sf rounded-md aspect-[2/3] flex items-center justify-center text-mu text-xs p-1 text-center overflow-hidden '+c}>{it.title.slice(0,8)}</div>;
+const Empty=({t})=><div className="fade flex flex-col items-center gap-3 py-20 text-mu"><Ic n="inbox" s={28}/><p className="text-sm">{t}</p></div>;
+const Chip=({on,onClick,children})=><button onClick={onClick} className={'px-3 py-1 rounded-full text-sm whitespace-nowrap border '+(on?'bg-tx text-bg border-tx':'border-bd text-mu')}>{children}</button>;
+const Modal=({onClose,children})=><div className="fade fixed inset-0 z-40 bg-black/30 flex items-end sm:items-center justify-center" onClick={onClose}>
+ <div className="bg-bg border border-bd w-full max-w-lg max-h-[90vh] overflow-auto rounded-t-2xl sm:rounded-2xl p-4" onClick={e=>e.stopPropagation()}>{children}</div></div>;
+const StatusBar=({it,set})=><div className="flex gap-1">{ST.map(s=><button key={s.k} title={s.l} aria-label={s.l} onClick={()=>set(it,s.k)}
+ className={'w-9 h-9 rounded-full flex items-center justify-center '+(it.status===s.k?'bg-ac text-bg':'text-mu hover:bg-sf')}><Ic n={s.i} s={16} f={it.status===s.k&&s.k==='play'}/></button>)}</div>;
+const Stars=({v,on})=><div className="flex gap-0.5">{[1,2,3,4,5].map(n=><button key={n} onClick={()=>on(v===n?0:n)} className={n<=v?'text-ac':'text-bd'}><Ic n="star" s={20} f={n<=v}/></button>)}</div>;
+const Full=({it,set,open})=><div className="flex gap-3 py-3 border-b border-bd">
+ <button onClick={()=>open(it.id)} className="w-16 shrink-0"><Cover it={it} c="w-16"/></button>
+ <div className="min-w-0 flex-1">
+  <button onClick={()=>open(it.id)} className="hd text-left block max-w-full truncate">{it.title}</button>
+  <p className="text-sm text-mu truncate">{[it.creator,it.year].filter(Boolean).join(' · ')}</p>
+  <p className="text-xs text-mu mt-1">{stOf(it.status).l}{dateOf(it)&&' · '+dateOf(it)}</p>
+  <div className="mt-1 -ml-1"><StatusBar it={it} set={set}/></div></div></div>;
+const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} className="text-left w-full"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
+
+/* ---- 마크다운(간이) ---- */
+const md=s=>{let h=s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ h=h.replace(/`([^`]+)`/g,'<code class="bg-sf px-1 rounded">$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*\n]+)\*/g,'<i>$1</i>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener" class="underline text-ac">$1</a>');
+ return h.split('\n').map(l=>/^#{1,3} /.test(l)?`<div class="hd">${l.replace(/^#+ /,'')}</div>`:/^[-*] /.test(l)?`<div class="pl-3">• ${l.slice(2)}</div>`:/^&gt; /.test(l)?`<div class="pl-2 border-l-2 border-bd text-mu">${l.slice(5)}</div>`:l?`<div>${l}</div>`:'<div class="h-2"></div>').join('')};
+const Md=({s})=><div className="text-sm break-words" dangerouslySetInnerHTML={{__html:md(s)}}/>;
+const fmtT=t=>{const d=new Date(t);return `${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+const posStr=p=>p?[(p.s||p.e)&&(p.s?'S'+p.s:'')+(p.e?'E'+p.e:''),p.p&&'p.'+p.p,p.pct&&p.pct+'%',p.ts].filter(Boolean).join(' · '):'';
+
+/* ---- 메모 입력창 ---- */
+const Composer=({type,init,onSave,onCancel,ph='메모 입력'})=>{
+ const [tx,setTx]=S(init?.text||'');const [pos,setPos]=S(init?.pos||null);const [on,setOn]=S(!!init?.pos);const [big,setBig]=S(false);
+ const F={book:[['p','쪽'],['pct','%']],movie:[['ts','시:분:초']],drama:[['s','시즌'],['e','화'],['ts','시:분:초']]}[type]||[['ts','시:분:초']];
+ const send=()=>{if(!tx.trim())return;onSave({text:tx.trim(),pos:on&&pos&&Object.values(pos).some(Boolean)?pos:null});setTx('');setPos(null);setOn(false);setBig(false)};
+ return <div className="mt-2">
+  <div className="flex gap-2 items-end"><textarea rows="2" placeholder={ph} value={tx} onChange={e=>setTx(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))send()}}/>
+   <div className="flex flex-col gap-1"><button onClick={()=>setBig(true)} aria-label="크게 쓰기" className="w-9 h-9 flex items-center justify-center text-mu"><Ic n="expand" s={16}/></button>
+    <button onClick={send} aria-label="보내기" className="w-9 h-9 rounded-full bg-ac text-bg flex items-center justify-center"><Ic n="send" s={16}/></button></div></div>
+  <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-mu"><label className="flex items-center gap-1"><input type="checkbox" className="!w-auto" checked={on} onChange={e=>setOn(e.target.checked)}/>위치</label>
+   {on&&F.map(([k,pl])=><input key={k} placeholder={pl} value={pos?.[k]||''} onChange={e=>setPos({...pos,[k]:e.target.value})} className="!w-20 !py-1"/>)}
+   {onCancel&&<button onClick={onCancel} className="ml-auto">취소</button>}</div>
+  {big&&<Modal onClose={()=>setBig(false)}><textarea rows="14" autoFocus placeholder="마크다운 지원 (# 제목, **굵게**, - 목록, [링크](https://))" value={tx} onChange={e=>setTx(e.target.value)}/>
+   <div className="mt-3 p-3 border border-bd rounded-lg min-h-[60px]"><Md s={tx||'미리보기'}/></div>
+   <div className="flex justify-end mt-3"><button onClick={send} className="px-4 py-2 rounded-lg bg-ac text-bg">보내기</button></div></Modal>}
+ </div>};
+
+/* ---- 메모 스레드(채팅형, 답글, 타래) ---- */
+const Memos=({it,upd,full})=>{
+ const notes=it.notes||(it.note?[{id:'n0',t:it.added||Date.now(),text:it.note}]:[]);
+ const [rep,setRep]=S(null);const [ed,setEd]=S(null);const [th,setTh]=S(null);const [ex,setEx]=S({});
+ const save=ns=>upd(it.id,{notes:ns,note:''});
+ const kids=id=>notes.filter(n=>n.parent===id);
+ const desc=id=>kids(id).flatMap(k=>[k.id,...desc(k.id)]);
+ const post=(o,parent)=>save([...notes,{id:uid(),t:Date.now(),parent,...o}]);
+ const del=n=>{if(!confirm('메모를 삭제할까요? 답글도 함께 삭제돼요.'))return;const ids=[n.id,...desc(n.id)];save(notes.filter(x=>!ids.includes(x.id)))};
+ const node=(n,d)=><div key={n.id} className={d?'ml-3 pl-3 border-l border-bd':''}><div className="py-2">
+  <div className="flex items-center gap-2 text-xs text-mu"><span>{fmtT(n.t)}</span>{n.edited&&<span>수정됨</span>}{posStr(n.pos)&&<span className="px-2 py-0.5 rounded-full bg-sf">{posStr(n.pos)}</span>}</div>
+  {ed===n.id?<Composer type={it.type} init={n} onSave={o=>{save(notes.map(x=>x.id===n.id?{...x,...o,edited:1}:x));setEd(null)}} onCancel={()=>setEd(null)}/>
+   :<div onClick={()=>setEx({...ex,[n.id]:!ex[n.id]})} className="cursor-pointer mt-1" style={full||ex[n.id]?{}:{display:'-webkit-box',WebkitLineClamp:4,WebkitBoxOrient:'vertical',overflow:'hidden'}}><Md s={n.text}/></div>}
+  <div className="flex gap-3 text-xs text-mu mt-1"><button onClick={()=>setRep(rep===n.id?null:n.id)}>답글</button><button onClick={()=>setEd(n.id)}>수정</button><button onClick={()=>del(n)}>삭제</button>{desc(n.id).length>0&&!th&&<button onClick={()=>setTh(n.id)}>타래 {desc(n.id).length+1}</button>}</div>
+  {rep===n.id&&<Composer type={it.type} ph="답글" onSave={o=>{post(o,n.id);setRep(null)}} onCancel={()=>setRep(null)}/>}</div>
+  {kids(n.id).map(k=>node(k,d+1))}</div>;
+ const roots=th?notes.filter(n=>n.id===th):notes.filter(n=>!n.parent).sort((a,b)=>a.t-b.t);
+ return <div className="mt-4">
+  {th&&<button onClick={()=>setTh(null)} className="text-sm text-ac mb-1 flex items-center gap-1"><Ic n="cl" s={14}/>전체 메모</button>}
+  {!roots.length&&<p className="text-sm text-mu py-2">메모가 없어요</p>}
+  {roots.map(n=>node(n,0))}
+  {!th&&<Composer type={it.type} onSave={o=>post(o)}/>}</div>};
+const NotePage=({it,upd,close})=><div className="fade fixed inset-0 z-[35] bg-bg overflow-auto"><div className="max-w-2xl mx-auto px-4 py-4 pb-20">
+ <div className="flex items-center gap-2"><button onClick={close} aria-label="닫기"><Ic n="cl"/></button><h1 className="truncate">{it.title}</h1></div><Memos it={it} upd={upd} full/></div></div>;
+
+/* ---- 목록 ---- */
+const tok=/\[\[([^\]]+)\]\]/g;
+const ListsView=({db,t,openList})=>{
+ const [q,setQ]=S('');const [f,setF]=S('');
+ const ids=b=>[...b.matchAll(tok)].map(m=>m[1]);
+ const L=(db.lists||[]).filter(l=>l.type===t&&(!q||(l.title+l.body).toLowerCase().includes(q.toLowerCase()))&&(!f||ids(l.body).some(id=>db.items.find(i=>i.id===id)?.status===f)));
+ return <div><input className="mt-3" placeholder="목록 검색" value={q} onChange={e=>setQ(e.target.value)}/>
+  <div className="flex gap-2 overflow-x-auto py-3"><Chip on={!f} onClick={()=>setF('')}>전체</Chip>{ST.map(s=><Chip key={s.k} on={f===s.k} onClick={()=>setF(s.k)}>{s.l}</Chip>)}</div>
+  {!L.length?<Empty t="아직 목록이 없어요"/>:L.map(l=><button key={l.id} onClick={()=>openList(l.id)} className="fade w-full text-left py-3 border-b border-bd"><p className="hd">{l.title||'제목 없음'}</p><p className="text-sm text-mu">작품 {ids(l.body).length}개</p>
+   <div className="flex gap-1 mt-2">{ids(l.body).slice(0,6).map(id=>{const i=db.items.find(a=>a.id===id);return i&&<Cover key={id} it={i} c="w-8"/>})}</div></button>)}</div>};
+const ListEditor=({l,db,type,setDb,open,close})=>{
+ const [x,setX]=S(l==='new'?{id:uid(),type,title:'',body:'',added:Date.now()}:db.lists.find(a=>a.id===l));
+ const [q,setQ]=S('');const [f,setF]=S('');const [ed,setEd]=S(l==='new');
+ const save=p=>{const n={...x,...p};setX(n);setDb(d=>({...d,lists:d.lists.some(a=>a.id===n.id)?d.lists.map(a=>a.id===n.id?n:a):[n,...d.lists]}))};
+ const hits=q?db.items.filter(i=>i.type===x.type&&i.title.toLowerCase().includes(q.toLowerCase())).slice(0,6):[];
+ const row=(ln,k)=>{const m=ln.trim().match(/^\[\[([^\]]+)\]\]$/);
+  if(m){const i=db.items.find(a=>a.id===m[1]);if(!i)return <p key={k} className="text-sm text-mu py-1">삭제된 작품</p>;if(f&&i.status!==f)return null;const s=stOf(i.status);
+   return <button key={k} onClick={()=>open(i.id)} className="w-full flex items-center gap-3 py-1.5 text-left"><Cover it={i} c="w-9 shrink-0"/><span className="flex-1 min-w-0"><span className="block truncate">{i.title}</span><span className="block text-xs text-mu truncate">{[i.creator,i.year].filter(Boolean).join(' · ')}</span></span>
+    <span className="text-xs px-2 py-0.5 rounded-full bg-sf flex items-center gap-1 shrink-0"><Ic n={s.i} s={12}/>{s.l}</span></button>}
+  return ln.trim()?<Md key={k} s={ln.replace(tok,(a,id)=>db.items.find(i=>i.id===id)?.title||a)}/>:<div key={k} className="h-2"/>};
+ return <Modal onClose={close}>
+  <div className="flex items-center gap-2"><input className="hd" placeholder="목록 제목" value={x.title} onChange={e=>save({title:e.target.value})}/><button onClick={close} aria-label="닫기"><Ic n="x"/></button></div>
+  <div className="flex gap-2 my-3"><Chip on={ed} onClick={()=>setEd(true)}>편집</Chip><Chip on={!ed} onClick={()=>setEd(false)}>보기</Chip></div>
+  {ed?<><textarea rows="8" placeholder="텍스트를 입력하거나, 아래에서 작품을 검색해 연결하세요" value={x.body} onChange={e=>save({body:e.target.value})}/>
+   <input className="mt-2" placeholder="라이브러리에서 작품 검색해 연결" value={q} onChange={e=>setQ(e.target.value)}/>
+   {hits.map(i=><button key={i.id} onClick={()=>{save({body:(x.body?x.body.replace(/\n?$/,'\n'):'')+'[['+i.id+']]\n'});setQ('')}} className="w-full flex items-center gap-2 py-1 text-left"><Cover it={i} c="w-6"/><span className="truncate flex-1">{i.title}</span><Ic n="plus" s={14}/></button>)}
+   <button onClick={()=>{if(confirm('목록을 삭제할까요?')){setDb(d=>({...d,lists:d.lists.filter(a=>a.id!==x.id)}));close()}}} className="mt-4 text-sm text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button></>
+  :<><div className="flex gap-2 overflow-x-auto pb-2"><Chip on={!f} onClick={()=>setF('')}>전체</Chip>{ST.map(s=><Chip key={s.k} on={f===s.k} onClick={()=>setF(s.k)}>{s.l}</Chip>)}</div>
+   {x.body.trim()?x.body.split('\n').map(row):<Empty t="비어 있어요"/>}</>}
+ </Modal>};
+
+/* ---- 상세(full 팝업) ---- */
+const Detail=({it,set,upd,del,close,page})=><Modal onClose={close}>
+ <div className="flex gap-4"><Cover it={it} c="w-24 shrink-0"/>
+  <div className="flex-1 min-w-0 space-y-2"><input value={it.title} onChange={e=>upd(it.id,{title:e.target.value})} className="hd"/>
+   <input placeholder="지은이/감독" value={it.creator||''} onChange={e=>upd(it.id,{creator:e.target.value})}/>
+   <input placeholder="연도" value={it.year||''} onChange={e=>upd(it.id,{year:e.target.value})}/></div>
+  <button onClick={close} className="self-start text-mu"><Ic n="x"/></button></div>
+ <div className="mt-3 flex items-center justify-between"><StatusBar it={it} set={set}/><span className="text-sm text-mu">{stOf(it.status).l}</span></div>
+ <div className="mt-3"><Stars v={it.rating||0} on={n=>upd(it.id,{rating:n})}/></div>
+ <div className="grid grid-cols-2 gap-2 mt-3 text-sm text-mu">
+  <label>시작<input type="date" value={it.startedAt||''} onChange={e=>upd(it.id,{startedAt:e.target.value})}/></label>
+  <label>완료<input type="date" value={it.finishedAt||''} onChange={e=>upd(it.id,{finishedAt:e.target.value})}/></label></div>
+ {(TAGS[it.type]||[]).length>0&&<div className="flex flex-wrap gap-1.5 mt-3">{TAGS[it.type].map(g=>{const on=(it.tags||[]).includes(g);return <Chip key={g} on={on} onClick={()=>upd(it.id,{tags:on?it.tags.filter(x=>x!==g):[...(it.tags||[]),g]})}>{g}</Chip>})}</div>}
+ <div className="flex items-center justify-between mt-4 border-t border-bd pt-3"><span className="hd">메모</span><button onClick={()=>page(it.id)} className="text-sm text-ac">메모 페이지</button></div>
+ <Memos it={it} upd={upd}/>
+ <input placeholder="표지 URL" className="mt-2" value={it.cover||''} onChange={e=>upd(it.id,{cover:e.target.value})}/>
+ <button onClick={()=>{if(confirm('삭제할까요?')){del(it.id);close()}}} className="mt-4 text-sm text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button>
+</Modal>;
+
+/* ---- 추가 ---- */
+const Add=({type,types,cfg,add,close})=>{
+ const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(type));
+ const [tab,setTab]=S(provs.length?'s':'m');const [pv,setPv]=S(provs[0]?.[0]);const [q,setQ]=S('');
+ const [res,setRes]=S([]);const [busy,setBusy]=S(false);const [err,setErr]=S('');const [st,setSt]=S('planned');const [done,setDone]=S({});
+ const [m,setM]=S({title:'',creator:'',year:'',cover:''});
+ const go=async()=>{if(!q.trim())return;const p=PROV[pv];setErr('');
+  if(p.key&&!cfg[p.key]){setErr('설정에서 '+p.l+' API 키를 입력하세요.');return}
+  setBusy(true);try{setRes(await p.search(q,cfg))}catch(e){setErr('검색 실패. 키 또는 CORS 프록시 설정을 확인하세요.');setRes([])}setBusy(false)};
+ return <Modal onClose={close}>
+  <div className="flex items-center justify-between mb-3"><div className="flex gap-2">
+   {provs.length>0&&<Chip on={tab==='s'} onClick={()=>setTab('s')}>검색</Chip>}<Chip on={tab==='m'} onClick={()=>setTab('m')}>직접 추가</Chip></div>
+   <button onClick={close} className="text-mu"><Ic n="x"/></button></div>
+  <select value={st} onChange={e=>setSt(e.target.value)} className="mb-3">{ST.map(s=><option key={s.k} value={s.k}>{s.l}으로 추가</option>)}</select>
+  {tab==='s'?<>
+   <div className="flex gap-2 mb-2">{provs.length>1&&<select className="!w-auto" value={pv} onChange={e=>setPv(e.target.value)}>{provs.map(([k,p])=><option key={k} value={k}>{p.l}</option>)}</select>}
+    <input placeholder="제목 검색" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&go()}/>
+    <button onClick={go} className="px-3 rounded-lg bg-ac text-bg"><Ic n="search" s={16}/></button></div>
+   {err&&<p className="text-sm text-mu">{err}</p>}{busy&&<p className="text-sm text-mu">검색 중…</p>}
+   {res.map((r,i)=><div key={i} className="flex gap-3 py-2 border-b border-bd items-center">
+    <Cover it={r} c="w-10 shrink-0"/><div className="flex-1 min-w-0"><p className="truncate">{r.title}</p><p className="text-xs text-mu truncate">{[r.creator,r.year].filter(Boolean).join(' · ')}</p></div>
+    <button disabled={done[i]} onClick={()=>{add({...r,type,status:st});setDone({...done,[i]:1})}} className="w-9 h-9 rounded-full border border-bd flex items-center justify-center text-ac"><Ic n={done[i]?'check':'plus'} s={16}/></button></div>)}
+  </>:<div className="space-y-2">
+   {[['title','제목'],['creator','지은이/감독'],['year','연도'],['cover','표지 URL']].map(([k,l])=><input key={k} placeholder={l} value={m[k]} onChange={e=>setM({...m,[k]:e.target.value})}/>)}
+   <button disabled={!m.title.trim()} onClick={()=>{add({...m,type,status:st,source:'manual'});close()}} className="w-full py-2 rounded-lg bg-ac text-bg disabled:opacity-40">추가</button></div>}
+ </Modal>};
+
+/* ---- 라이브러리 / 감상중 ---- */
+const Library=({db,cfg,set,open,add,setDb})=>{
+ const [t,setT]=S(db.types[0].id);const [view,setView]=S('full');const [f,setF]=S('');const [q,setQ]=S('');const [adding,setAdding]=S(false);const [mode,setMode]=S('items');const [tg,setTg]=S('');const [ol,setOl]=S(null);
+ const list=db.items.filter(i=>i.type===t&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>b.added-a.added);
+ return <div>
+  <div className="flex items-center gap-1 border-b border-bd sticky top-0 bg-bg z-10 pt-3">
+   <div className="flex-1 flex gap-4 overflow-x-auto">{db.types.map(x=><button key={x.id} onClick={()=>setT(x.id)} className={'pb-2 hd whitespace-nowrap border-b-2 '+(t===x.id?'border-ac text-tx':'border-transparent text-mu')}>{x.l}</button>)}</div>
+   <button onClick={()=>mode==='lists'?setOl('new'):setAdding(true)} className="mb-2 w-9 h-9 rounded-full bg-ac text-bg flex items-center justify-center" aria-label="추가"><Ic n="plus"/></button></div>
+  <div className="flex gap-2 mt-3"><Chip on={mode==='items'} onClick={()=>setMode('items')}>작품</Chip><Chip on={mode==='lists'} onClick={()=>setMode('lists')}>목록</Chip></div>
+  {mode==='lists'?<ListsView db={db} t={t} openList={setOl}/>:<>
+  <div className="flex gap-2 mt-3"><input placeholder="라이브러리 검색" value={q} onChange={e=>setQ(e.target.value)}/>
+   <select className="!w-auto" value={view} onChange={e=>setView(e.target.value)}><option value="full">상세</option><option value="compact">간단</option><option value="poster">포스터</option></select><select className="!w-auto" value={tg} onChange={e=>setTg(e.target.value)}><option value="">태그</option>{(TAGS[t]||[]).map(x=><option key={x}>{x}</option>)}</select></div>
+  <div className="flex gap-2 overflow-x-auto py-3"><Chip on={!f} onClick={()=>setF('')}>전체</Chip>{ST.map(s=><Chip key={s.k} on={f===s.k} onClick={()=>setF(s.k)}>{s.l}</Chip>)}</div>
+  {!list.length?<Empty t="아직 기록이 없어요"/>:view==='full'?list.map(i=><Full key={i.id} it={i} set={set} open={open}/>)
+   :view==='compact'?list.map(i=><button key={i.id} onClick={()=>open(i.id)} className="fade w-full flex items-center gap-3 py-2 border-b border-bd text-left"><Ic n={stOf(i.status).i} s={15} c="text-ac shrink-0"/><span className="truncate flex-1">{i.title}</span><span className="text-xs text-mu shrink-0">{i.year}</span></button>)
+   :<div className="fade grid grid-cols-3 sm:grid-cols-4 gap-3">{list.map(i=><Mini key={i.id} it={i} open={open} sub/>)}</div>}
+  </>}
+  {ol&&<ListEditor key={ol} l={ol} db={db} type={t} setDb={setDb} open={open} close={()=>setOl(null)}/>}
+  {adding&&<Add type={t} types={db.types} cfg={cfg} add={add} close={()=>setAdding(false)}/>}
+ </div>};
+const Playing=({db,set,open})=>{
+ const g=k=>db.items.filter(i=>i.status===k);const a=g('playing'),b=g('paused');
+ return <div className="pt-3">{!a.length&&!b.length?<Empty t="감상중인 작품이 없어요"/>:<>
+  {a.map(i=><Full key={i.id} it={i} set={set} open={open}/>)}
+  {b.length>0&&<p className="text-sm text-mu mt-6">일시정지</p>}{b.map(i=><Full key={i.id} it={i} set={set} open={open}/>)}</>}</div>};
+
+/* ---- 타임라인 ---- */
+const Timeline=({db,set,open})=>{
+ const [v,setV]=S('list');const [t,setT]=S('');const [f,setF]=S('');const [ym,setYm]=S(today().slice(0,7));const [day,setDay]=S(today());
+ const items=db.items.filter(i=>dateOf(i)&&(!t||i.type===t)&&(!f||i.status===f));
+ const by={};items.forEach(i=>(by[dateOf(i)]=by[dateOf(i)]||[]).push(i));
+ const V=[['list','목록'],['cal','캘린더'],['day','일력'],['bar','항목별']];
+ let body;
+ if(!items.length)body=<Empty t="날짜가 있는 기록이 없어요"/>;
+ else if(v==='list'){const ds=Object.keys(by).sort().reverse();body=ds.map(d=><div key={d} className="py-2"><p className="text-sm text-mu mb-1">{d}</p>{by[d].map(i=><Full key={i.id} it={i} set={set} open={open}/>)}</div>)}
+ else if(v==='cal'){const[y,m]=ym.split('-').map(Number);const first=new Date(y,m-1,1).getDay();const n=new Date(y,m,0).getDate();
+  const cells=[...Array(first).fill(null),...Array.from({length:n},(_,i)=>i+1)];
+  body=<div><div className="flex items-center justify-between mb-2"><button onClick={()=>setYm(addMon(ym,-1))}><Ic n="cl"/></button><span className="hd">{y}년 {m}월</span><button onClick={()=>setYm(addMon(ym,1))}><Ic n="cr"/></button></div>
+   <div className="grid grid-cols-7 text-center text-xs text-mu mb-1">{WD.map(w=><span key={w}>{w}</span>)}</div>
+   <div className="grid grid-cols-7 gap-px bg-bd border border-bd">{cells.map((c,i)=>{const ds=c?`${ym}-${String(c).padStart(2,'0')}`:'';const l=by[ds]||[];
+    return <div key={i} className="bg-bg min-h-[64px] p-0.5">{c&&<><span className={'text-[10px] '+(ds===today()?'text-ac font-medium':'text-mu')}>{c}</span>
+     <div className="flex flex-col gap-0.5 mt-0.5">{l.slice(0,2).map(it=><button key={it.id} onClick={()=>open(it.id)}><Cover it={it} c="w-full !aspect-[3/2] !rounded-sm"/></button>)}{l.length>2&&<span className="text-[10px] text-mu">+{l.length-2}</span>}</div></>}</div>})}</div></div>}
+ else if(v==='day'){const l=by[day]||[];const d=new Date(day+'T00:00:00');
+  body=<div><div className="flex items-center justify-between mb-4"><button onClick={()=>setDay(addDay(day,-1))}><Ic n="cl"/></button>
+   <div className="text-center"><p className="text-5xl hd">{d.getDate()}</p><p className="text-sm text-mu">{d.getFullYear()}.{d.getMonth()+1} {WD[d.getDay()]}요일</p></div><button onClick={()=>setDay(addDay(day,1))}><Ic n="cr"/></button></div>
+   <input type="date" value={day} onChange={e=>e.target.value&&setDay(e.target.value)} className="mb-4"/>
+   {l.length?<div className="fade grid grid-cols-3 gap-3">{l.map(i=><Mini key={i.id} it={i} open={open} sub/>)}</div>:<Empty t="이 날의 기록이 없어요"/>}</div>}
+ else{const PX=4;const rows=db.items.filter(i=>(i.startedAt||i.finishedAt)&&(!t||i.type===t)&&(!f||i.status===f)).map(i=>({i,s:i.startedAt||i.finishedAt,e:i.finishedAt||(i.status==='playing'?today():i.startedAt||i.finishedAt)})).sort((a,b)=>a.s<b.s?-1:1);
+  const t0=rows[0].s.slice(0,7)+'-01';const end=rows.reduce((m,r)=>r.e>m?r.e:m,t0);const W=(dd(end,t0)+90)*PX;
+  const ticks=[];for(let m=t0.slice(0,7);addMon(m,0)<=addMon(end.slice(0,7),1);m=addMon(m,1))ticks.push(m);
+  body=<div className="overflow-x-auto border border-bd rounded-lg"><div style={{width:W,position:'relative',height:rows.length*34+30}}>
+   {ticks.map(m=><div key={m} className="absolute top-0 bottom-0 border-l border-bd text-[10px] text-mu pl-1" style={{left:dd(m+'-01',t0)*PX}}>{m}</div>)}
+   {rows.map((r,k)=>{const l=dd(r.s,t0)*PX;const w=Math.max((dd(r.e,r.s)+1)*PX,8);
+    return <button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute flex items-center gap-2 text-left" style={{left:l,top:24+k*34,height:28}}>
+     <span className="h-5 rounded-full bg-ac block shrink-0" style={{width:w,opacity:r.i.status==='done'?1:.5}}/><span className="text-xs whitespace-nowrap">{r.i.title}</span></button>})}</div></div>}
+ return <div>
+  <div className="sticky top-0 bg-bg z-10 pt-3 pb-2 border-b border-bd space-y-2">
+   <div className="flex gap-2">{V.map(([k,l])=><Chip key={k} on={v===k} onClick={()=>setV(k)}>{l}</Chip>)}</div>
+   <div className="flex gap-2 overflow-x-auto"><select className="!w-auto" value={t} onChange={e=>setT(e.target.value)}><option value="">모든 종류</option>{db.types.map(x=><option key={x.id} value={x.id}>{x.l}</option>)}</select>
+    <Chip on={!f} onClick={()=>setF('')}>전체</Chip>{ST.map(s=><Chip key={s.k} on={f===s.k} onClick={()=>setF(s.k)}>{s.l}</Chip>)}</div></div>
+  <div className="pt-3">{body}</div></div>};
+
+/* ---- 설정 ---- */
+const ACC=['#859900','#6c8f7e','#b58900','#2aa198','#268bd2','#a89f8a'];
+const Settings=({db,setDb,cfg,setCfg})=>{
+ const [et,setEt]=S('');const [es,setEs]=S('');const [pend,setPend]=S(null);const [it,setIt]=S('');const [is,setIs]=S('');const [nt,setNt]=S('');
+ const pick=(t,s)=>db.items.filter(i=>(!t||i.type===t)&&(!s||i.status===s));
+ const Sel=({v,s})=><div className="flex gap-2"><select value={v[0]} onChange={e=>v[1](e.target.value)}><option value="">모든 종류</option>{db.types.map(x=><option key={x.id} value={x.id}>{x.l}</option>)}</select>
+  <select value={s[0]} onChange={e=>s[1](e.target.value)}><option value="">모든 상태</option>{ST.map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>;
+ const Sec=({t,children})=><section className="py-5 border-b border-bd space-y-3"><h2 className="text-sm text-mu">{t}</h2>{children}</section>;
+ const file=async e=>{const f=e.target.files[0];if(!f)return;const tx=await f.text();try{const rows=f.name.endsWith('.json')?(JSON.parse(tx).items||JSON.parse(tx)):parseCSV(tx);setPend(fromRows(rows,db.types))}catch(x){alert('파일을 읽을 수 없어요')}e.target.value=''};
+ const doImport=()=>{const L=pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is));
+  const key=i=>[i.type,i.title,i.year].join('|');const have=new Set(db.items.map(key));const nw=L.filter(i=>!have.has(key(i))).map(i=>({...i,added:Date.now()}));
+  const types=[...db.types];nw.forEach(i=>{if(!types.some(x=>x.id===i.type))types.push({id:i.type,l:i.type})});
+  setDb({...db,types,items:[...db.items,...nw]});alert(nw.length+'개 가져옴 (중복 '+(L.length-nw.length)+'개 제외)');setPend(null)};
+ return <div>
+  <Sec t="테마"><div className="flex gap-2">{[['light','Solarized Light'],['dark','Solarized Dark'],['auto','시스템']].map(([k,l])=><Chip key={k} on={cfg.theme===k} onClick={()=>setCfg({...cfg,theme:k})}>{l}</Chip>)}</div>
+   <div className="flex gap-3">{ACC.map(c=><button key={c} aria-label={c} onClick={()=>setCfg({...cfg,accent:c})} style={{background:c}} className={'w-8 h-8 rounded-full '+(cfg.accent===c?'ring-2 ring-offset-2 ring-tx ring-offset-bg':'')}/>)}</div></Sec>
+  <Sec t="검색 API"><input placeholder="국립중앙도서관 cert_key" value={cfg.nlk} onChange={e=>setCfg({...cfg,nlk:e.target.value})}/>
+   <input placeholder="TMDB API 키 (v3)" value={cfg.tmdb} onChange={e=>setCfg({...cfg,tmdb:e.target.value})}/>
+   <input placeholder="CORS 프록시 주소 (선택, 예: https://proxy.example/?url=)" value={cfg.proxy} onChange={e=>setCfg({...cfg,proxy:e.target.value})}/></Sec>
+  <Sec t="내보내기"><Sel v={[et,setEt]} s={[es,setEs]}/><p className="text-sm text-mu">{pick(et,es).length}개 선택됨</p>
+   <div className="flex gap-2"><button onClick={()=>dl('기록.csv',toCSV(pick(et,es)),'text/csv')} className="flex-1 py-2 rounded-lg border border-bd flex items-center justify-center gap-2"><Ic n="dl" s={16}/>CSV</button>
+    <button onClick={()=>dl('기록.json',JSON.stringify({items:pick(et,es)},null,1),'application/json')} className="flex-1 py-2 rounded-lg border border-bd flex items-center justify-center gap-2"><Ic n="dl" s={16}/>JSON</button></div></Sec>
+  <Sec t="가져오기"><label className="py-2 rounded-lg border border-bd flex items-center justify-center gap-2 cursor-pointer"><Ic n="ul" s={16}/>CSV / JSON / Letterboxd CSV 선택<input type="file" accept=".csv,.json" onChange={file} className="hidden"/></label>
+   {pend&&<><Sel v={[it,setIt]} s={[is,setIs]}/><p className="text-sm text-mu">{pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is)).length}개 가져올 예정 (같은 종류·제목·연도는 건너뜀)</p>
+    <button onClick={doImport} className="w-full py-2 rounded-lg bg-ac text-bg">가져오기</button></>}</Sec>
+  <Sec t="종류 관리"><div className="flex gap-2 flex-wrap">{db.types.map(x=><span key={x.id} className="px-3 py-1 rounded-full bg-sf text-sm">{x.l}</span>)}</div>
+   <div className="flex gap-2"><input placeholder="새 종류 (예: 드라마)" value={nt} onChange={e=>setNt(e.target.value)}/><button disabled={!nt.trim()} onClick={()=>{setDb({...db,types:[...db.types,{id:'t'+uid(),l:nt.trim()}]});setNt('')}} className="px-3 rounded-lg bg-ac text-bg disabled:opacity-40"><Ic n="plus" s={16}/></button></div></Sec>
+  <Sec t="데이터"><p className="text-sm text-mu">이 브라우저에 저장됩니다. 주기적으로 내보내기를 권장해요.</p>
+   <button onClick={()=>{if(confirm('모든 기록을 삭제할까요?'))setDb({...db,items:[]})}} className="text-sm text-mu">전체 삭제</button></Sec>
+ </div>};
+
+/* ---- App ---- */
+function App(){
+ const [db,setDb]=S(()=>{const d=load('rec.db',{types:[{id:'book',l:'책'},{id:'movie',l:'영화'},{id:'drama',l:'드라마'}],items:[],lists:[]});if(!d.types.some(x=>x.id==='drama'))d.types=[...d.types,{id:'drama',l:'드라마'}];return d});
+ const [cfg,setCfg]=S(()=>load('rec.cfg',{theme:'light',accent:'#859900',nlk:'',tmdb:'',proxy:''}));
+ const [tab,setTab]=S('lib');const [sel,setSel]=S(null);const [np,setNp]=S(null);
+ E(()=>{localStorage.setItem('rec.db',JSON.stringify(db))},[db]);
+ E(()=>{localStorage.setItem('rec.cfg',JSON.stringify(cfg));const r=document.documentElement;
+  const mq=matchMedia('(prefers-color-scheme: dark)');const ap=()=>{r.dataset.t=cfg.theme==='auto'?(mq.matches?'dark':'light'):cfg.theme;r.style.setProperty('--ac',cfg.accent)};ap();mq.addEventListener('change',ap);return()=>mq.removeEventListener('change',ap)},[cfg]);
+ const upd=(id,p)=>setDb(d=>({...d,items:d.items.map(i=>i.id===id?{...i,...p}:i)}));
+ const set=(it,s)=>{const p={status:s};if(s==='playing'&&!it.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=it.finishedAt||today();if(!it.startedAt)p.startedAt=p.finishedAt}upd(it.id,p)};
+ const add=o=>setDb(d=>({...d,items:[{rating:0,startedAt:'',finishedAt:'',note:'',...o,id:uid(),added:Date.now()},...d.items]}));
+ const del=id=>setDb(d=>({...d,items:d.items.filter(i=>i.id!==id)}));
+ const cur=db.items.find(i=>i.id===sel);const npi=db.items.find(i=>i.id===np);
+ if(cur&&cur.status==='playing'&&!cur.startedAt)upd(cur.id,{startedAt:today()});
+ const T=[['lib','라이브러리','lib'],['now','감상중','play'],['tl','타임라인','cal'],['set','설정','set']];
+ return <div className="max-w-2xl mx-auto px-4 pb-28 min-h-screen" style={{paddingTop:'env(safe-area-inset-top)'}}>
+  {tab==='lib'&&<Library db={db} cfg={cfg} set={set} open={setSel} add={add} setDb={setDb}/>}
+  {tab==='now'&&<Playing db={db} set={set} open={setSel}/>}
+  {tab==='tl'&&<Timeline db={db} set={set} open={setSel}/>}
+  {tab==='set'&&<Settings db={db} setDb={setDb} cfg={cfg} setCfg={setCfg}/>}
+  {npi&&<NotePage it={npi} upd={upd} close={()=>setNp(null)}/>}
+  {cur&&<Detail it={cur} set={set} upd={upd} del={del} close={()=>setSel(null)} page={id=>{setSel(null);setNp(id)}}/>}
+  <nav className="fixed bottom-0 inset-x-0 bg-bg border-t border-bd z-30" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
+   <div className="max-w-2xl mx-auto grid grid-cols-4">{T.map(([k,l,i])=><button key={k} onClick={()=>setTab(k)} className={'py-2.5 flex flex-col items-center gap-0.5 text-xs '+(tab===k?'text-ac':'text-mu')}><Ic n={i} s={20}/>{l}</button>)}</div></nav>
+ </div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>
