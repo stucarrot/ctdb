@@ -58,7 +58,7 @@ const PROV={
  tmdb:{l:'TMDB',t:['movie'],key:'tmdb',async search(q,c){
   const u=`https://api.themoviedb.org/3/search/movie?api_key=${c.tmdb}&language=ko-KR&query=${encodeURIComponent(q)}`;
   const r=await(await fetch(px(c,u))).json();
-  return(r.results||[]).slice(0,15).map(d=>({title:d.title,creator:'',year:(d.release_date||'').slice(0,4),tags:gt(d.genre_ids),cover:d.poster_path?'https://image.tmdb.org/t/p/w342'+d.poster_path:'',extId:String(d.id),source:'tmdb'}))}}
+  return(r.results||[]).slice(0,15).map(d=>({title:d.original_title||d.title,sub:hg(d.title)&&nz(d.title)!==nz(d.original_title)?d.title:'',creator:'',year:(d.release_date||'').slice(0,4),tags:gt(d.genre_ids),cover:d.poster_path?'https://image.tmdb.org/t/p/w342'+d.poster_path:'',extId:String(d.id),source:'tmdb'}))}}
 };
 
 PROV.tmdbtv={l:'TMDB',t:['drama'],key:'tmdb',async search(q,c){
@@ -86,16 +86,35 @@ const gm=v=>{const id=t=>((v.industryIdentifiers||[]).find(x=>x.type===t)||{}).i
  return mk({부제:v.subtitle,출판사:v.publisher,출판일:v.publishedDate,언어:ln(v.language),쪽수:v.pageCount,분류:v.categories,'ISBN-13':id('ISBN_13'),'ISBN-10':id('ISBN_10'),소개:strip(v.description),평점:v.averageRating?v.averageRating+' ('+(v.ratingsCount||0)+')':'',미리보기:v.previewLink})};
 const om=d=>mk({출판사:(d.publisher||[]).slice(0,6),언어:(d.language||[]).slice(0,6).map(ln),쪽수:d.number_of_pages_median,'판본 수':d.edition_count,'최초 출간':d.first_publish_year,주제:(d.subject||[]).slice(0,10),ISBN:(d.isbn||[]).slice(0,3),첫문장:(d.first_sentence||[])[0],평점:d.ratings_average?d.ratings_average.toFixed(1)+' ('+(d.ratings_count||0)+')':'',링크:d.key?'https://openlibrary.org'+d.key:''});
 const tm=async(path,c,ex)=>await(await fetch(px(c,`https://api.themoviedb.org/3/${path}?api_key=${c.tmdb}&language=ko-KR${ex}`))).json();
+const nz=x=>String(x||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
+const hg=x=>/[가-힣]/.test(x||'');
+/* 영화 제목 표기: 메인=원어(original_title), 보조=한글 → 영어 → 생략 */
+const subOf=(m,d)=>{const T=d.translations?.translations||[];const g=l=>(T.find(t=>t.iso_639_1===l)?.data?.title||'').trim();
+ return[g('ko')||(hg(d.title)?d.title:''),g('en')].find(x=>x&&nz(x)!==nz(m))||''};
+const tmL=async(path,c,ex,lang)=>await(await fetch(px(c,`https://api.themoviedb.org/3/${path}?api_key=${c.tmdb}&language=${lang}${ex}`))).json();
+/* 레터박스드 원문 제목과 (원제/한글/영어 중) 정확히 일치하고 연도 ±1 이내인 영화만 인정. 없으면 null */
+const strictTmdb=async(i,c)=>{const q='&query='+encodeURIComponent(i.title),y=+i.year,want=nz(i.title);if(!want)return null;
+ const pick=rs=>{const m=new Map();rs.forEach(h=>m.has(h.id)?m.get(h.id).n.push(h.title):m.set(h.id,{h,n:[h.original_title,h.title]}));
+  return[...m.values()].filter(({h,n})=>{const hy=+(h.release_date||'').slice(0,4);return(!y||!hy||Math.abs(hy-y)<=1)&&n.some(t=>nz(t)===want)}).sort((a,b)=>Math.abs((+(a.h.release_date||'').slice(0,4)||y)-y)-Math.abs((+(b.h.release_date||'').slice(0,4)||y)-y))[0]?.h};
+ const [a,b]=await Promise.all([tmL('search/movie',c,q,'ko-KR'),tmL('search/movie',c,q,'en-US')]);
+ let h=pick([...(a.results||[]),...(b.results||[])]);
+ if(!h&&y)h=pick((await tmL('search/movie',c,q+'&year='+y,'ko-KR')).results||[]);
+ return h?{title:h.original_title||h.title,year:(h.release_date||'').slice(0,4),cover:h.poster_path?'https://image.tmdb.org/t/p/w342'+h.poster_path:'',tags:gt(h.genre_ids),extId:String(h.id),source:'tmdb'}:null};
+/* 갱신 병합: 사용자 입력(상태·별점·메모·날짜)은 건드리지 않고 정보만 합침 */
+const mergeInfo=(it,r,x,o)=>{const n={...r,...x};return{
+ ...(o.title&&n.title?{title:n.title,sub:n.sub||''}:{}),...(o.cover&&n.cover?{cover:n.cover}:{}),
+ creator:n.creator||it.creator,year:n.year||it.year,tags:o.tags?[...new Set([...(it.tags||[]),...(n.tags||[])])]:(it.tags||[]),
+ meta:{...(it.meta||{}),...(n.meta||{})},source:r.source,extId:r.extId}};
 const names=(a,jobs)=>[...new Set((a||[]).filter(x=>!jobs||jobs.includes(x.job)).map(x=>x.name))];
-PROV.tmdb.detail=async(r,c)=>{const d=await tm('movie/'+r.extId,c,'&append_to_response=credits,external_ids,release_dates');
+PROV.tmdb.detail=async(r,c)=>{const d=await tm('movie/'+r.extId,c,'&append_to_response=credits,external_ids,release_dates,translations');
  const kr=((d.release_dates?.results||[]).find(x=>x.iso_3166_1==='KR')?.release_dates||[]).map(x=>x.certification).find(Boolean);
  const cr=d.credits?.crew,dir=names(cr,['Director']);
- return{creator:dir.join(', '),tags:gt((d.genres||[]).map(g=>g.id)),meta:mk({원제:d.original_title,태그라인:d.tagline,줄거리:d.overview,개봉일:d.release_date,상영시간:d.runtime?d.runtime+'분':'',상태:d.status,감독:dir,각본:names(cr,['Screenplay','Writer','Story']),촬영:names(cr,['Director of Photography']),음악:names(cr,['Original Music Composer']),출연:names(d.credits?.cast).slice(0,12),제작사:(d.production_companies||[]).map(x=>x.name),제작국가:(d.production_countries||[]).map(x=>x.name),언어:(d.spoken_languages||[]).map(x=>x.name),원어:ln(d.original_language),'관람등급(KR)':kr,시리즈:d.belongs_to_collection?.name,'TMDB 평점':d.vote_average?d.vote_average.toFixed(1)+' ('+d.vote_count+')':'',예산:d.budget?'$'+d.budget.toLocaleString():'',수익:d.revenue?'$'+d.revenue.toLocaleString():'',홈페이지:d.homepage,IMDb:d.external_ids?.imdb_id,'TMDB ID':d.id})}};
+ return{title:d.original_title||d.title,sub:subOf(d.original_title||d.title,d),creator:dir.join(', '),tags:gt((d.genres||[]).map(g=>g.id)),meta:mk({원제:d.original_title,태그라인:d.tagline,줄거리:d.overview,개봉일:d.release_date,상영시간:d.runtime?d.runtime+'분':'',상태:d.status,감독:dir,각본:names(cr,['Screenplay','Writer','Story']),촬영:names(cr,['Director of Photography']),음악:names(cr,['Original Music Composer']),출연:names(d.credits?.cast).slice(0,12),제작사:(d.production_companies||[]).map(x=>x.name),제작국가:(d.production_countries||[]).map(x=>x.name),언어:(d.spoken_languages||[]).map(x=>x.name),원어:ln(d.original_language),'관람등급(KR)':kr,시리즈:d.belongs_to_collection?.name,'TMDB 평점':d.vote_average?d.vote_average.toFixed(1)+' ('+d.vote_count+')':'',예산:d.budget?'$'+d.budget.toLocaleString():'',수익:d.revenue?'$'+d.revenue.toLocaleString():'',홈페이지:d.homepage,IMDb:d.external_ids?.imdb_id,'TMDB ID':d.id})}};
 PROV.tmdbtv.detail=async(r,c)=>{const d=await tm('tv/'+r.extId,c,'&append_to_response=credits,external_ids,content_ratings');
  const kr=(d.content_ratings?.results||[]).find(x=>x.iso_3166_1==='KR')?.rating;const by=(d.created_by||[]).map(x=>x.name);
  return{creator:by.join(', '),tags:gt((d.genres||[]).map(g=>g.id)),meta:mk({원제:d.original_name,태그라인:d.tagline,줄거리:d.overview,방영:[d.first_air_date,d.status==='Ended'||d.status==='Canceled'?d.last_air_date:''].filter(Boolean).join(' ~ '),상태:d.status,유형:d.type,시즌:d.number_of_seasons,'총 에피소드':d.number_of_episodes,'회당 시간':(d.episode_run_time||[])[0]?d.episode_run_time[0]+'분':'','시즌 구성':(d.seasons||[]).filter(x=>x.season_number>0).map(x=>`S${x.season_number} ${x.episode_count}화${x.air_date?' ('+x.air_date+')':''}`).join('\n'),방송사:(d.networks||[]).map(x=>x.name),크리에이터:by,출연:names(d.credits?.cast).slice(0,12),제작사:(d.production_companies||[]).map(x=>x.name),제작국가:d.origin_country,언어:(d.languages||[]).map(ln),원어:ln(d.original_language),'관람등급(KR)':kr,'TMDB 평점':d.vote_average?d.vote_average.toFixed(1)+' ('+d.vote_count+')':'',홈페이지:d.homepage,IMDb:d.external_ids?.imdb_id,'TMDB ID':d.id})}};
 /* ---- CSV ---- */
-const COLS=['id','type','title','creator','year','status','rating','startedAt','finishedAt','note','cover','source','extId','tags','notes','meta','read','review'];
+const COLS=['id','type','title','creator','year','status','rating','startedAt','finishedAt','note','cover','source','extId','tags','notes','meta','read','review','sub'];
 const pj=v=>{if(Array.isArray(v))return v;try{return JSON.parse(v)||[]}catch(e){return[]}};
 const pjo=v=>{if(v&&typeof v==='object')return v;try{return JSON.parse(v)||{}}catch(e){return{}}};
 const csvEsc=v=>{v=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
@@ -144,7 +163,7 @@ const Full=({it,set,open})=><div className="flex gap-3 py-3 border-b border-bd">
  <button onClick={()=>open(it.id)} className="w-16 shrink-0"><Cover it={it} c="w-16"/></button>
  <div className="min-w-0 flex-1">
   <div className="flex items-start gap-1"><button onClick={()=>open(it.id)} className="hd text-left block min-w-0 flex-1 truncate">{it.title}</button><LBtn it={it}/><NBtn it={it}/><QBtn it={it}/></div>
-  <p className="text-sm text-mu truncate">{[it.creator,it.year].filter(Boolean).join(' · ')}</p>
+  {it.sub&&<p className="text-sm truncate">{it.sub}</p>}<p className="text-sm text-mu truncate">{[it.creator,it.year].filter(Boolean).join(' · ')}</p>
   <p className="text-xs text-mu mt-1">{stOf(it.status).l}{dateOf(it)&&' · '+dateOf(it)}</p>
   <div className="mt-1 -ml-1"><StatusBar it={it} set={set}/></div>
   {it.status==='done'&&(it.read>0||it.rating>0||it.review)&&<p className="text-[11px] text-mu mt-1 flex items-center gap-1.5 min-w-0">{it.read>0&&<span className="shrink-0">{RL(it).slice(0,2)} {it.read}%</span>}{it.rating>0&&<span className="text-ac shrink-0">★{it.rating}</span>}{it.review&&<span className="truncate">{it.review}</span>}</p>}</div></div>;
@@ -273,10 +292,30 @@ const MetaEd=({it,upd})=>{const m=it.meta||{};const [o,setO]=S(false);const ks=O
   {o&&<div className="fade mt-2 space-y-2">{ks.map(k=><label key={k} className="block text-xs text-mu">{k}
    {m[k].length>50||/\n/.test(m[k])?<textarea rows="3" value={m[k]} onChange={e=>set(k,e.target.value)}/>:<input value={m[k]} onChange={e=>set(k,e.target.value)}/>}</label>)}
    <button onClick={()=>{const k=prompt('항목 이름');if(k&&!(k in m))set(k,'')}} className="text-sm text-ac">+ 항목 추가</button></div>}</div>};
+const Refresh=({it,upd,close})=>{const {cfg}=React.useContext(QC);
+ const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(it.type));
+ const [pv,setPv]=S(PROV[it.source]&&PROV[it.source].t.includes(it.type)?it.source:provs[0]?.[0]);const [q,setQ]=S(it.title);
+ const [res,setRes]=S([]);const [busy,setBusy]=S(false);const [err,setErr]=S('');const [o,setO]=S({title:true,cover:true,tags:true});
+ const go=async()=>{const p=PROV[pv];if(!p||!q.trim())return;setErr('');if(p.key&&!cfg[p.key]){setErr('설정에서 '+p.l+' API 키를 입력하세요.');return}
+  setBusy(true);try{const x=await p.search(q,cfg);setRes(x);if(!x.length)setErr('검색 결과가 없어요')}catch(e){setErr('검색 실패: '+(e.message||''));setRes([])}setBusy(false)};
+ E(()=>{go()},[]);
+ const apply=async r=>{setBusy(true);let x={};try{const pr=PROV[r.source];x=pr&&pr.detail?await pr.detail(r,cfg):{}}catch(e){}upd(it.id,mergeInfo(it,r,x,o));close()};
+ const linked=PROV[it.source]&&PROV[it.source].detail&&it.extId;
+ return <Modal onClose={close}><div className="flex items-center justify-between mb-3"><span className="hd">정보 갱신</span><button onClick={close} aria-label="닫기"><Ic n="x"/></button></div>
+  {!provs.length?<p className="text-sm text-mu">이 종류는 검색 provider가 없어요</p>:<>
+  <div className="flex gap-2 mb-2">{provs.length>1&&<select className="!w-auto" value={pv} onChange={e=>setPv(e.target.value)}>{provs.map(([k,p])=><option key={k} value={k}>{p.l}</option>)}</select>}
+   <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&go()}/><button onClick={go} className="px-3 rounded-lg bg-ac text-bg" aria-label="검색"><Ic n="search" s={16}/></button></div>
+  <div className="flex flex-wrap gap-2 mb-2">{[['title','제목 표기'],['cover','표지'],['tags','태그 합치기']].map(([k,l])=><Chip key={k} on={o[k]} onClick={()=>setO({...o,[k]:!o[k]})}>{l}</Chip>)}</div>
+  <p className="text-xs text-mu mb-2">상세 정보·지은이·연도는 항상 병합돼요. 상태·별점·메모·날짜는 그대로 유지돼요.</p>
+  {linked&&<button disabled={busy} onClick={()=>apply({source:it.source,extId:it.extId})} className="w-full py-2 mb-2 rounded-lg border border-bd text-sm disabled:opacity-40">연결된 항목 정보 다시 가져오기</button>}
+  {err&&<p className="text-sm text-mu">{err}</p>}{busy&&<p className="text-sm text-mu">처리 중…</p>}
+  {res.map((r,i)=><button key={i} disabled={busy} onClick={()=>apply(r)} className="w-full flex gap-3 py-2 border-b border-bd items-center text-left"><Cover it={r} c="w-10 shrink-0"/><span className="flex-1 min-w-0"><span className="block truncate">{r.title}</span><span className="block text-xs text-mu truncate">{[r.sub,r.creator,r.year].filter(Boolean).join(' · ')}</span></span></button>)}</>}</Modal>};
+const RefreshBtn=({it,upd})=>{const [o,setO]=S(false);return <><button onClick={()=>setO(true)} className="mt-2 text-sm text-ac">정보 갱신 (다시 검색해 병합)</button>{o&&<Refresh it={it} upd={upd} close={()=>setO(false)}/>}</>};
 /* ---- 상세(full 팝업) ---- */
 const Detail=({it,set,upd,del,close,page})=><Modal onClose={close}>
  <div className="flex gap-4"><Cover it={it} c="w-24 shrink-0"/>
   <div className="flex-1 min-w-0 space-y-2"><input value={it.title} onChange={e=>upd(it.id,{title:e.target.value})} className="hd"/>
+   {(it.type==='movie'||it.sub)&&<input placeholder="보조 제목 (한글/영어)" value={it.sub||''} onChange={e=>upd(it.id,{sub:e.target.value})}/>}
    <input placeholder="지은이/감독" value={it.creator||''} onChange={e=>upd(it.id,{creator:e.target.value})}/>
    <input placeholder="연도" value={it.year||''} onChange={e=>upd(it.id,{year:e.target.value})}/></div>
   <button onClick={close} className="self-start text-mu"><Ic n="x"/></button></div>
@@ -293,6 +332,7 @@ const Detail=({it,set,upd,del,close,page})=><Modal onClose={close}>
  <div className="flex items-center justify-between mt-4 border-t border-bd pt-3"><span className="hd">메모</span><span className="flex items-center gap-1.5"><button onClick={()=>page(it.id)} className="text-sm text-ac">메모 페이지</button><span className="text-[10px] leading-4 px-1.5 rounded-full border border-bd">{nn(it)}</span></span></div>
  <Memos it={it} upd={upd}/>
  <input placeholder="표지 URL" className="mt-2" value={it.cover||''} onChange={e=>upd(it.id,{cover:e.target.value})}/>
+ <RefreshBtn it={it} upd={upd}/>
  <button onClick={()=>{if(confirm('삭제할까요?')){del(it.id);close()}}} className="mt-4 text-sm text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button>
 </Modal>;
 
@@ -318,7 +358,7 @@ const Add=({type,types,cfg,add,close})=>{
     {[['','모든 언어'],['ko','한국어'],['en','English'],['ru','Русский'],['ja','日本語'],['zh','中文'],['fr','Français'],['de','Deutsch'],['es','Español']].map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>}
    {err&&<p className="text-sm text-mu">{err}</p>}{busy&&<p className="text-sm text-mu">검색 중…</p>}
    {res.map((r,i)=><div key={i} className="flex gap-3 py-2 border-b border-bd items-center">
-    <Cover it={r} c="w-10 shrink-0"/><div className="flex-1 min-w-0"><p className="truncate">{r.title}</p><p className="text-xs text-mu truncate">{[r.creator,r.year,r.meta&&r.meta.출판사].filter(Boolean).join(' · ')}</p></div>
+    <Cover it={r} c="w-10 shrink-0"/><div className="flex-1 min-w-0"><p className="truncate">{r.title}</p><p className="text-xs text-mu truncate">{[r.sub,r.creator,r.year,r.meta&&r.meta.출판사].filter(Boolean).join(' · ')}</p></div>
     <button disabled={done[i]} onClick={async()=>{setDone(x=>({...x,[i]:1}));let x={};try{const pr=PROV[r.source];x=pr&&pr.detail?await pr.detail(r,cfg):{}}catch(e){}add({...r,...x,meta:{...r.meta,...x.meta},tags:x.tags&&x.tags.length?x.tags:r.tags,creator:x.creator||r.creator,type,status:st})}} className="w-9 h-9 rounded-full border border-bd flex items-center justify-center text-ac"><Ic n={done[i]?'check':'plus'} s={16}/></button></div>)}
   </>:<div className="space-y-2">
    {[['title','제목'],['creator','지은이/감독'],['year','연도'],['cover','표지 URL']].map(([k,l])=><input key={k} placeholder={l} value={m[k]} onChange={e=>setM({...m,[k]:e.target.value})}/>)}
@@ -446,12 +486,17 @@ const StatsView=({db,t,cfg})=>{
 const SORTS={added:['추가한 순',(a,b)=>(b.added||0)-(a.added||0)],date:['감상일 순',(a,b)=>dateOf(b).localeCompare(dateOf(a))],title:['제목 순',(a,b)=>a.title.localeCompare(b.title,'ko')],year:['연도 순',(a,b)=>(+b.year||0)-(+a.year||0)],rating:['별점 순',(a,b)=>(b.rating||0)-(a.rating||0)],creator:['지은이 순',(a,b)=>(a.creator||'힣').localeCompare(b.creator||'힣','ko')]};
 const Library=({db,cfg,set,open,add,setDb})=>{
  const [t,setT]=S(db.types[0].id);const [view,setView]=S('full');const [f,setF]=S('');const [q,setQ]=S('');const [adding,setAdding]=S(false);const [mode,setMode]=S('items');const [tg,setTg]=S('');const [ol,setOl]=S(null);const [sk,setSk]=S(()=>localStorage.getItem('rec.sort')||'added');const [rev,setRev]=S(false);const [bm,setBm]=S(false);const [bs,setBs]=S({});
- const list=db.items.filter(i=>i.type===t&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*SORTS[sk][1](a,b));
+ const list=db.items.filter(i=>i.type===t&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*SORTS[sk][1](a,b));
  const pick=id=>bm?setBs(x=>{const n={...x};n[id]?delete n[id]:n[id]=1;return n}):open(id);
  const ids=Object.keys(bs);const bulk=fn=>setDb(d=>({...d,items:d.items.map(i=>bs[i.id]?fn(i):i)}));
  const bStatus=s=>bulk(i=>{const p={status:s};if(s==='playing'&&!i.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=i.finishedAt||today();if(!i.startedAt)p.startedAt=p.finishedAt}return{...i,...p}});
  const bTag=v=>{const a=v[0]==='+',g=v.slice(1);bulk(i=>({...i,tags:a?[...new Set([...(i.tags||[]),g])]:(i.tags||[]).filter(x=>x!==g)}))};
  const bList=lid=>setDb(d=>({...d,lists:d.lists.map(l=>{if(l.id!==lid)return l;const a=ids.filter(id=>!l.body.includes('[['+id+']]'));return a.length?{...l,body:(l.body?l.body.replace(/\n?$/,'\n'):'')+a.map(id=>'[['+id+']]').join('\n')+'\n'}:l})}));
+ const bRef=async()=>{if(!cfg.tmdb){alert('TMDB 키가 필요해요');return}const T=db.items.filter(i=>bs[i.id]&&i.type==='movie');if(!T.length){alert('선택한 영화가 없어요');return}
+  let ok=0,k=0;const o={title:true,cover:true,tags:true};const U={};
+  await Promise.all([...Array(4)].map(async()=>{while(k<T.length){const i=T[k++];try{const r=i.source==='tmdb'&&i.extId?{source:'tmdb',extId:i.extId}:await strictTmdb(i,cfg);if(!r)continue;
+   const x=await PROV.tmdb.detail(r,cfg);U[i.id]=mergeInfo(i,r,x,o);ok++}catch(e){}}}));
+  setDb(d=>({...d,items:d.items.map(i=>U[i.id]?{...i,...U[i.id]}:i)}));alert(ok+'/'+T.length+'개 갱신 (원문 일치 없는 항목은 그대로)')};
  const bDel=()=>{if(ids.length&&confirm(ids.length+'개를 삭제할까요?')){setDb(d=>({...d,items:d.items.filter(i=>!bs[i.id])}));setBs({})}};
  const wrap=i=>node=>!bm?node:view==='poster'?<div key={i.id} className={'relative rounded-md '+(bs[i.id]?'ring-2 ring-ac':'')}>{node}<input type="checkbox" aria-label="선택" className="!w-auto absolute top-1 left-1" checked={!!bs[i.id]} onChange={()=>pick(i.id)}/></div>
   :<div key={i.id} className={'flex items-center gap-2 '+(bs[i.id]?'bg-sf rounded-lg':'')}><input type="checkbox" aria-label="선택" className="!w-auto shrink-0 ml-1" checked={!!bs[i.id]} onChange={()=>pick(i.id)}/><div className="flex-1 min-w-0">{node}</div></div>;
@@ -478,6 +523,7 @@ const Library=({db,cfg,set,open,add,setDb})=>{
    <BS ph="상태" on={bStatus}>{ST.map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</BS>
    <BS ph="태그" on={bTag}>{(TAGS[t]||[]).flatMap(g=>[<option key={'+'+g} value={'+'+g}>+ {g}</option>,<option key={'-'+g} value={'-'+g}>− {g}</option>])}</BS>
    <BS ph="목록에 추가" on={bList}>{(db.lists||[]).filter(l=>l.type===t).map(l=><option key={l.id} value={l.id}>{l.title||'제목 없음'}</option>)}</BS>
+   <button className="shrink-0 text-ac" onClick={bRef}>TMDB 갱신</button>
    <button className="shrink-0 text-mu" onClick={bDel} aria-label="삭제"><Ic n="tr" s={18}/></button></div></div>}
   {ol&&<ListEditor key={ol} l={ol} db={db} type={t} setDb={setDb} cfg={cfg} open={open} close={()=>setOl(null)}/>}
   {adding&&<Add type={t} types={db.types} cfg={cfg} add={add} close={()=>setAdding(false)}/>}
@@ -547,16 +593,15 @@ const Settings=({db,setDb,cfg,setCfg})=>{
  const doImport=async()=>{let L=pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is)).map(i=>ist?{...i,status:ist,...(ist==='done'?{finishedAt:i.finishedAt||today()}:{})}:i);
   if(L.some(i=>i.source==='letterboxd')){if(!cfg.tmdb){alert('Letterboxd는 TMDB로 조회해 가져와요. 위 검색 API에 TMDB 키를 먼저 입력하세요.');return}
    setProg({n:0,t:L.length});const out=[...L];
-   const work=async k=>{const i=L[k];if(i.source==='letterboxd'){try{const q='&query='+encodeURIComponent(i.title);let h=((await tm('search/movie',cfg,q+(i.year?'&year='+i.year:''))).results||[])[0];
-     if(!h&&i.year)h=((await tm('search/movie',cfg,q)).results||[])[0];
-     if(h){const base={...i,title:h.title||i.title,year:(h.release_date||'').slice(0,4)||i.year,cover:h.poster_path?'https://image.tmdb.org/t/p/w342'+h.poster_path:'',extId:String(h.id),tags:gt(h.genre_ids),source:'tmdb'};let x={};try{x=await PROV.tmdb.detail(base,cfg)}catch(e){}
+   const work=async k=>{const i=L[k];if(i.source==='letterboxd'){try{const h=await strictTmdb(i,cfg);
+     if(h){const base={...i,...h};let x={};try{x=await PROV.tmdb.detail(base,cfg)}catch(e){}
       out[k]={...base,...x,meta:{...base.meta,...x.meta},tags:x.tags&&x.tags.length?x.tags:base.tags,creator:x.creator||''}}else out[k]={...i,miss:1}}catch(e){out[k]={...i,miss:1}}}
     setProg(p=>({...p,n:p.n+1}))};
    let k=0;await Promise.all([...Array(4)].map(async()=>{while(k<L.length)await work(k++)}));L=out;setProg(null)}
   const key=i=>[i.type,i.title,i.year].join('|');const have=new Set();db.items.forEach(i=>{have.add(key(i));if(i.source==='tmdb')have.add('t'+i.extId)});
   const nw=[];let miss=0;L.forEach(({miss:m,...i})=>{const a=key(i),b=i.source==='tmdb'?'t'+i.extId:a;if(have.has(a)||have.has(b))return;have.add(a);have.add(b);if(m)miss++;nw.push({...i,added:Date.now()})});
   const types=[...db.types];nw.forEach(i=>{if(!types.some(x=>x.id===i.type))types.push({id:i.type,l:i.type})});
-  setDb({...db,types,items:[...db.items,...nw]});alert(nw.length+'개 가져옴 (중복 '+(L.length-nw.length)+'개 제외'+(miss?', TMDB 미매칭 '+miss+'개':'')+')');setPend(null)};
+  setDb({...db,types,items:[...db.items,...nw]});alert(nw.length+'개 가져옴 (중복 '+(L.length-nw.length)+'개 제외'+(miss?', 원문 일치 없음 '+miss+'개는 기록만':'')+')');setPend(null)};
  return <div>
   <Sec t="테마"><div className="flex gap-2 flex-wrap">{[['light','Solarized Light'],['dark','Solarized Dark'],['white','Paper White'],['sand','Warm Sand'],['nord','Nord'],['black','Graphite'],['auto','시스템']].map(([k,l])=><Chip key={k} on={cfg.theme===k} onClick={()=>setCfg({...cfg,theme:k})}>{l}</Chip>)}</div>
    <div className="flex gap-3 flex-wrap">{ACC.map(c=><button key={c} aria-label={c} onClick={()=>setCfg({...cfg,accent:c})} style={{background:c}} className={'w-8 h-8 rounded-full '+(cfg.accent===c?'ring-2 ring-offset-2 ring-tx ring-offset-bg':'')}/>)}</div></Sec>
@@ -575,7 +620,7 @@ const Settings=({db,setDb,cfg,setCfg})=>{
   <Sec t="가져오기"><label className="py-2 rounded-lg border border-bd flex items-center justify-center gap-2 cursor-pointer"><Ic n="ul" s={16}/>CSV / JSON / Letterboxd CSV 선택<input type="file" accept=".csv,.json" onChange={file} className="hidden"/></label>
    {pend&&<><Sel v={[it,setIt]} s={[is,setIs]}/>
     <label className="block text-xs text-mu">가져올 상태<select value={ist} onChange={e=>setIst(e.target.value)}><option value="">파일 값 유지 (Letterboxd는 완료)</option>{ST.map(x=><option key={x.k} value={x.k}>모두 {x.l}(으)로</option>)}</select></label>
-    {pend.some(i=>i.source==='letterboxd')&&<p className="text-xs text-mu">Letterboxd 목록은 제목·연도로 TMDB를 조회해 표지·장르·감독 등 상세 정보를 채워 가져와요.</p>}<p className="text-sm text-mu">{pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is)).length}개 가져올 예정 (같은 종류·제목·연도는 건너뜀)</p>
+    {pend.some(i=>i.source==='letterboxd')&&<p className="text-xs text-mu">Letterboxd 목록은 원문 제목·연도가 TMDB와 정확히 일치할 때만 상세 정보를 채워요. 일치하는 게 없으면 기록만 가져와요.</p>}<p className="text-sm text-mu">{pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is)).length}개 가져올 예정 (같은 종류·제목·연도는 건너뜀)</p>
     <button disabled={!!prog} onClick={doImport} className="w-full py-2 rounded-lg bg-ac text-bg disabled:opacity-40">{prog?`TMDB 조회 중 ${prog.n}/${prog.t}`:'가져오기'}</button></>}</Sec>
   <Sec t="종류 관리"><div className="flex gap-2 flex-wrap">{db.types.map(x=><span key={x.id} className="px-3 py-1 rounded-full bg-sf text-sm">{x.l}</span>)}</div>
    <div className="flex gap-2"><input placeholder="새 종류 (예: 드라마)" value={nt} onChange={e=>setNt(e.target.value)}/><button disabled={!nt.trim()} onClick={()=>{setDb({...db,types:[...db.types,{id:'t'+uid(),l:nt.trim()}]});setNt('')}} className="px-3 rounded-lg bg-ac text-bg disabled:opacity-40"><Ic n="plus" s={16}/></button></div></Sec>
