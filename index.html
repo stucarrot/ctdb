@@ -138,8 +138,8 @@ const Cover=({it,c=''})=>{const [st,setSt]=S(0);E(()=>setSt(0),[it.cover]);
  :<div className={'bg-sf rounded-md aspect-[2/3] flex items-center justify-center text-mu text-xs p-1 text-center overflow-hidden '+c}>{it.title.slice(0,8)}</div>};
 const Empty=({t})=><div className="fade flex flex-col items-center gap-3 py-20 text-mu"><Ic n="inbox" s={28}/><p className="text-sm">{t}</p></div>;
 const Chip=({on,onClick,children})=><button onClick={onClick} className={'px-3 py-1 rounded-full text-sm whitespace-nowrap border '+(on?'bg-tx text-bg border-tx':'border-bd text-mu')}>{children}</button>;
-const Modal=({onClose,children})=><div className="fade fixed inset-0 z-40 bg-black/30 flex items-end sm:items-center justify-center" onClick={onClose}>
- <div className="bg-bg border border-bd w-full max-w-lg max-h-[90vh] overflow-auto rounded-t-2xl sm:rounded-2xl p-4" onClick={e=>e.stopPropagation()}>{children}</div></div>;
+const Modal=({onClose,children,style})=><div className="fade fixed inset-0 z-40 bg-black/30 flex items-end sm:items-center justify-center" onClick={onClose}>
+ <div className="bg-bg border border-bd w-full max-w-lg max-h-[90vh] overflow-auto rounded-t-2xl sm:rounded-2xl p-4" style={style} onClick={e=>e.stopPropagation()}>{children}</div></div>;
 const StatusBar=({it,set})=><div className="flex gap-1">{ST.map(s=><button key={s.k} title={s.l} aria-label={s.l} onClick={()=>set(it,s.k)}
  className={'w-9 h-9 rounded-full flex items-center justify-center '+(it.status===s.k?'bg-ac text-bg':'text-mu hover:bg-sf')}><Ic n={s.i} s={16} f={it.status===s.k&&s.k==='play'}/></button>)}</div>;
 const Stars=({v,on})=><div className="flex gap-0.5">{[1,2,3,4,5].map(n=><button key={n} onClick={()=>on(v===n?0:n)} className={n<=v?'text-ac':'text-bd'}><Ic n="star" s={20} f={n<=v}/></button>)}</div>;
@@ -151,6 +151,8 @@ const QBtn=({it})=>{const {qset,ranks}=React.useContext(QC);const r=ranks[it.id]
    {[1,2,3].map(n=><button key={n} onClick={()=>{if(r!==n)qset(it.id,n);setO(false)}} className={'w-9 h-8 rounded-md text-sm '+(r===n?'bg-ac text-bg':'hover:bg-sf')}>P{n}</button>)}
    <button onClick={()=>{qset(it.id,'end');setO(false)}} aria-label="대기열 맨 끝에 추가" title="맨 끝에" className="w-9 h-8 rounded-md hover:bg-sf flex items-center justify-center"><Ic n="down" s={16}/></button>
    {it.q&&<button onClick={()=>{qset(it.id,null);setO(false)}} aria-label="대기열에서 제거" className="w-9 h-8 rounded-md text-mu hover:bg-sf flex items-center justify-center"><Ic n="x" s={14}/></button>}</div>}</span>};
+const TC={book:'#e6b422',movie:'#4a90d9',drama:'#d96aa7'},XC=['#5bb381','#8d78e0','#e8905a','#3fb9c2'];
+const tbg=id=>({background:`color-mix(in srgb, ${TC[id]||XC[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%XC.length]} 26%, var(--bg))`});
 const nn=it=>(it.notes||(it.note?[1]:[])).length;
 const RL=it=>it.type==='book'?'정독비율':'집중비율';
 const LBtn=({it})=>{const {lists,addList}=React.useContext(QC);const [o,setO]=S(false);const L=(lists||[]).filter(l=>l.type===it.type);
@@ -159,7 +161,7 @@ const LBtn=({it})=>{const {lists,addList}=React.useContext(QC);const [o,setO]=S(
    {L.map(l=>{const has=l.body.includes('[['+it.id+']]');return <button key={l.id} disabled={has} onClick={()=>{addList(l.id,it.id);setO(false)}} className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-sf truncate disabled:text-mu">{has?'✓ ':''}{l.title||'제목 없음'}</button>})}</div>}</span>};
 const NBtn=({it})=>{const {openNote}=React.useContext(QC);const n=nn(it);
  return <button onClick={()=>openNote(it.id)} aria-label="메모 페이지" className="h-8 px-1.5 rounded-full flex items-center gap-1 text-mu hover:bg-sf shrink-0"><Ic n="msg" s={16}/>{n>0&&<span className="text-[10px] leading-4 px-1.5 rounded-full border border-bd text-tx">{n}</span>}</button>};
-const Full=({it,set,open})=><div className="flex gap-3 py-3 border-b border-bd">
+const Full=({it,set,open})=><div style={tbg(it.type)} className="flex gap-3 p-3 mb-2 rounded-xl">
  <button onClick={()=>open(it.id)} className="w-16 shrink-0"><Cover it={it} c="w-16"/></button>
  <div className="min-w-0 flex-1">
   <div className="flex items-start gap-1"><button onClick={()=>open(it.id)} className="hd text-left block min-w-0 flex-1 truncate">{it.title}</button><LBtn it={it}/><NBtn it={it}/><QBtn it={it}/></div>
@@ -167,7 +169,7 @@ const Full=({it,set,open})=><div className="flex gap-3 py-3 border-b border-bd">
   <p className="text-xs text-mu mt-1">{stOf(it.status).l}{dateOf(it)&&' · '+dateOf(it)}</p>
   <div className="mt-1 -ml-1"><StatusBar it={it} set={set}/></div>
   {it.status==='done'&&(it.read>0||it.rating>0||it.review)&&<p className="text-[11px] text-mu mt-1 flex items-center gap-1.5 min-w-0">{it.read>0&&<span className="shrink-0">{RL(it).slice(0,2)} {it.read}%</span>}{it.rating>0&&<span className="text-ac shrink-0">★{it.rating}</span>}{it.review&&<span className="truncate">{it.review}</span>}</p>}</div></div>;
-const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} className="text-left w-full"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
+const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} style={tbg(it.type)} className="text-left w-full p-1.5 rounded-lg"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
 
 /* ---- 마크다운(간이) ---- */
 const md=s=>{let h=s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -261,7 +263,7 @@ const ListsView=({db,t,openList})=>{
  const L=(db.lists||[]).filter(l=>l.type===t&&(!q||(l.title+l.body).toLowerCase().includes(q.toLowerCase()))&&(!f||ids(l.body).some(id=>db.items.find(i=>i.id===id)?.status===f)));
  return <div><input className="mt-3" placeholder="목록 검색" value={q} onChange={e=>setQ(e.target.value)}/>
   <div className="flex gap-2 overflow-x-auto py-3"><Chip on={!f} onClick={()=>setF('')}>전체</Chip>{ST.map(s=><Chip key={s.k} on={f===s.k} onClick={()=>setF(s.k)}>{s.l}</Chip>)}</div>
-  {!L.length?<Empty t="아직 목록이 없어요"/>:L.map(l=><button key={l.id} onClick={()=>openList(l.id)} className="fade w-full text-left py-3 border-b border-bd"><p className="hd">{l.title||'제목 없음'}</p><p className="text-sm text-mu">작품 {ids(l.body).length}개</p>
+  {!L.length?<Empty t="아직 목록이 없어요"/>:L.map(l=><button key={l.id} onClick={()=>openList(l.id)} style={tbg(l.type)} className="fade w-full text-left p-3 mb-2 rounded-xl"><p className="hd">{l.title||'제목 없음'}</p><p className="text-sm text-mu">작품 {ids(l.body).length}개</p>
    <div className="flex gap-1 mt-2">{ids(l.body).slice(0,6).map(id=>{const i=db.items.find(a=>a.id===id);return i&&<Cover key={id} it={i} c="w-8"/>})}</div></button>)}</div>};
 const ListEditor=({l,db,type,setDb,cfg,open,close})=>{
  const [x,setX]=S(l==='new'?{id:uid(),type,title:'',body:'',added:Date.now()}:db.lists.find(a=>a.id===l));
@@ -312,7 +314,7 @@ const Refresh=({it,upd,close})=>{const {cfg}=React.useContext(QC);
   {res.map((r,i)=><button key={i} disabled={busy} onClick={()=>apply(r)} className="w-full flex gap-3 py-2 border-b border-bd items-center text-left"><Cover it={r} c="w-10 shrink-0"/><span className="flex-1 min-w-0"><span className="block truncate">{r.title}</span><span className="block text-xs text-mu truncate">{[r.sub,r.creator,r.year].filter(Boolean).join(' · ')}</span></span></button>)}</>}</Modal>};
 const RefreshBtn=({it,upd})=>{const [o,setO]=S(false);return <><button onClick={()=>setO(true)} className="mt-2 text-sm text-ac">정보 갱신 (다시 검색해 병합)</button>{o&&<Refresh it={it} upd={upd} close={()=>setO(false)}/>}</>};
 /* ---- 상세(full 팝업) ---- */
-const Detail=({it,set,upd,del,close,page})=><Modal onClose={close}>
+const Detail=({it,set,upd,del,close,page})=><Modal onClose={close} style={tbg(it.type)}>
  <div className="flex gap-4"><Cover it={it} c="w-24 shrink-0"/>
   <div className="flex-1 min-w-0 space-y-2"><input value={it.title} onChange={e=>upd(it.id,{title:e.target.value})} className="hd"/>
    {(it.type==='movie'||it.sub)&&<input placeholder="보조 제목 (한글/영어)" value={it.sub||''} onChange={e=>upd(it.id,{sub:e.target.value})}/>}
@@ -378,8 +380,11 @@ const QueueView=({items,set,open,setDb})=>{
    {man&&<div className="flex flex-col justify-center text-mu"><button disabled={!k} onClick={()=>mv(k,-1)} aria-label="위로" className="p-1.5 disabled:opacity-30"><Ic n="up"/></button>
     <button disabled={k===items.length-1} onClick={()=>mv(k,1)} aria-label="아래로" className="p-1.5 disabled:opacity-30"><Ic n="down"/></button></div>}</div>)}</div>};
 /* ---- 이미지 내보내기 도구 ---- */
-const tcol=()=>{const cs=getComputedStyle(document.documentElement);const g=k=>cs.getPropertyValue(k).trim();return{bg:g('--bg'),sf:g('--sf'),tx:g('--tx'),mu:g('--mu'),bd:g('--bd'),ac:g('--ac')}};
-const fnt=(w,z)=>`${w} ${z}px ${getComputedStyle(document.body).fontFamily}`;
+const xdark=()=>!!localStorage.getItem('rec.xdark');
+const tcol=()=>{const ac=getComputedStyle(document.documentElement).getPropertyValue('--ac').trim();
+ return xdark()?{bg:'#0d0d0d',sf:'#1e1e1e',tx:'#ffffff',mu:'#d4d4d4',bd:'#3d3d3d',ac}:{bg:'#ffffff',sf:'#f2f2f0',tx:'#0a0a0a',mu:'#4a4a4a',bd:'#d6d6d6',ac}};
+const XF='-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif';
+const fnt=(w,z)=>`${w<400?500:w<500?600:700} ${z}px ${XF}`;
 const rr=(g,x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()};
 const wrapT=(g,t,w,max)=>{const L=[];let ln='';for(const wd of String(t).split(' ')){const c=ln?ln+' '+wd:wd;if(g.measureText(c).width<=w){ln=c;continue}
  if(ln)L.push(ln);ln='';for(const ch of wd){if(g.measureText(ln+ch).width>w&&ln){L.push(ln);ln=ch}else ln+=ch}}
@@ -407,40 +412,34 @@ const drawStats=async(d,label,rg,all)=>{await document.fonts.ready;const[c,g,C]=
  const y2=990+tg.length*54+60;sec(all?'유형별 완료':'별점 분포',y2);
  bars(g,C,all?d.byType.slice(0,5):[5,4,3,2,1].map(z=>['★'.repeat(z),d.rating[z-1]]),72,y2+30,936);return c};
 const drawList=async(x,items,pg,pages,cfg)=>{await document.fonts.ready;const[c,g,C]=newCv();
- g.fillStyle=C.tx;g.font=fnt(500,64);const tl=wrapT(g,x.title||'제목 없음',pages>1?820:936,2);tl.forEach((t,i)=>g.fillText(t,72,140+i*78));
- g.fillStyle=C.mu;g.font=fnt(300,30);g.fillText(`작품 ${items.length}개`,72,140+(tl.length-1)*78+52);
- if(pages>1){g.textAlign='right';g.fillText(`${pg+1} / ${pages}`,1008,140);g.textAlign='left'}
+ g.fillStyle=C.tx;g.font=fnt(700,76);const tl=wrapT(g,x.title||'제목 없음',pages>1?780:936,2);tl.forEach((t,i)=>g.fillText(t,72,150+i*92));
+ if(pages>1){g.fillStyle=C.mu;g.font=fnt(600,38);g.textAlign='right';g.fillText(`${pg+1} / ${pages}`,1008,150);g.textAlign='left'}
  const its=items.slice(pg*6,pg*6+6);const imgs=await Promise.all(its.map(i=>loadImg(i,cfg)));
- its.forEach((it,n)=>{const y=330+n*252,h=234;rr(g,72,y,936,h,24);g.fillStyle=C.sf;g.fill();
-  const pw=134,ph=202,x0=88,y0=y+16;rr(g,x0,y0,pw,ph,10);g.save();g.clip();
+ its.forEach((it,n)=>{const y=330+n*252,h=234;rr(g,72,y,936,h,24);g.fillStyle=C.sf;g.fill();g.strokeStyle=C.bd;g.lineWidth=2;g.stroke();
+  const pw=134,ph=202,x0=88,y0=y+16;g.save();rr(g,x0,y0,pw,ph,10);g.clip();
   if(imgs[n]){const im=imgs[n],s=Math.max(pw/im.width,ph/im.height),dw=im.width*s,dh=im.height*s;g.drawImage(im,x0+(pw-dw)/2,y0+(ph-dh)/2,dw,dh)}
-  else{g.fillStyle=C.bd;g.fillRect(x0,y0,pw,ph);g.fillStyle=C.mu;g.font=fnt(300,24);wrapT(g,it.title,pw-16,4).forEach((t,i)=>g.fillText(t,x0+8,y0+40+i*30))}
+  else{g.fillStyle=C.bd;g.fillRect(x0,y0,pw,ph);g.fillStyle=C.tx;g.font=fnt(500,26);wrapT(g,it.title,pw-16,4).forEach((t,i)=>g.fillText(t,x0+8,y0+40+i*32))}
   g.restore();
-  const tx0=x0+pw+32,tw=1008-16-tx0;g.fillStyle=C.tx;g.font=fnt(500,40);const tt=wrapT(g,it.title,tw,2);tt.forEach((t,i)=>g.fillText(t,tx0,y+58+i*48));
-  g.fillStyle=C.mu;g.font=fnt(300,28);const sub=[it.creator,it.year].filter(Boolean).join(' · ');if(sub)g.fillText(wrapT(g,sub,tw,1)[0],tx0,y+58+tt.length*48+4);
-  const cy=y+h-34,st=stOf(it.status);g.font=fnt(400,26);const sw=g.measureText(st.l).width+36;rr(g,tx0,cy-32,sw,44,22);g.strokeStyle=C.ac;g.lineWidth=2;g.stroke();g.fillStyle=C.ac;g.fillText(st.l,tx0+18,cy);
-  let cx=tx0+sw+20;if(it.rating){const z='★'.repeat(it.rating);g.font=fnt(400,30);g.fillStyle=C.ac;g.fillText(z,cx,cy);cx+=g.measureText(z).width+20}
-  g.font=fnt(300,26);g.fillStyle=C.mu;const tg=(it.tags||[]).slice(0,3).join(' · ');if(tg)g.fillText(wrapT(g,tg,1008-16-cx,1)[0],cx,cy)});return c};
+  const tx0=x0+pw+32,tw=1008-24-tx0;g.fillStyle=C.tx;g.font=fnt(700,44);const tt=wrapT(g,it.title,tw,2);tt.forEach((t,i)=>g.fillText(t,tx0,y+62+i*54));
+  let yy=y+62+(tt.length-1)*54+46;
+  if(it.sub){g.fillStyle=C.tx;g.font=fnt(500,34);g.fillText(wrapT(g,it.sub,tw,1)[0],tx0,yy);yy+=42}
+  const cr=[it.creator,it.year].filter(Boolean).join(' · ');if(cr){g.fillStyle=C.mu;g.font=fnt(500,30);g.fillText(wrapT(g,cr,tw,1)[0],tx0,yy)}});return c};
 
 /* ---- 목록: 공유용 카드 ---- */
-const ListCard=({x,db,cfg})=>{const [pg,setPg]=S(0);const [busy,setBusy]=S(false);
+const ListCard=({x,db,cfg})=>{const [pg,setPg]=S(0);const [busy,setBusy]=S(false);const [dk,setDk]=S(xdark());const [url,setUrl]=S('');
  const items=[...x.body.matchAll(tok)].map(m=>db.items.find(i=>i.id===m[1])).filter(Boolean);
- const pages=Math.max(1,Math.ceil(items.length/6));const p=Math.min(pg,pages-1);const cur=items.slice(p*6,p*6+6);
+ const pages=Math.max(1,Math.ceil(items.length/6));const p=Math.min(pg,pages-1);
  const exp=async all=>{setBusy(true);try{for(const k of all?[...Array(pages).keys()]:[p]){await shareCv(await drawList(x,items,k,pages,cfg),`${x.title||'목록'}${pages>1?'-'+(k+1):''}.png`)}}finally{setBusy(false)}};
+ const setD=v=>{localStorage.setItem('rec.xdark',v?'1':'');setDk(v)};
+ E(()=>{let on=true;setUrl('');if(items.length)drawList(x,items,p,pages,cfg).then(c=>{if(on)setUrl(c.toDataURL())});return()=>{on=false}},[p,dk,x.title,x.body]);
  if(!items.length)return <Empty t="연결된 작품이 없어요"/>;
  return <div>
-  {pages>1&&<div className="flex gap-2 mb-2">{[...Array(pages).keys()].map(k=><Chip key={k} on={p===k} onClick={()=>setPg(k)}>{k+1}</Chip>)}</div>}
-  <div className="mx-auto w-full max-w-[320px] aspect-[9/16] rounded-2xl border border-bd bg-bg p-4 overflow-hidden flex flex-col">
-   <div className="flex items-start justify-between gap-2"><h2 className="text-base leading-tight" style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{x.title||'제목 없음'}</h2>{pages>1&&<span className="text-[10px] text-mu shrink-0">{p+1}/{pages}</span>}</div>
-   <p className="text-[10px] text-mu mb-2">작품 {items.length}개</p>
-   <div className="flex-1 grid grid-rows-6 gap-1.5 min-h-0">{cur.map(it=>{const st=stOf(it.status);return <div key={it.id} className="bg-sf rounded-lg p-1.5 flex gap-2 min-h-0 overflow-hidden">
-    <Cover it={it} c="w-11 shrink-0 self-start"/>
-    <div className="min-w-0 flex-1 flex flex-col justify-between"><div><p className="hd text-[11px] leading-tight" style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{it.title}</p>
-     <p className="text-[9px] text-mu truncate">{[it.creator,it.year].filter(Boolean).join(' · ')}</p></div>
-     <div className="flex items-center gap-1.5 text-[9px] min-w-0"><span className="px-1.5 py-px rounded-full border border-ac text-ac shrink-0">{st.l}</span>{it.rating>0&&<span className="text-ac shrink-0">{'★'.repeat(it.rating)}</span>}<span className="text-mu truncate">{(it.tags||[]).slice(0,3).join(' · ')}</span></div></div></div>})}</div></div>
+  <div className="flex gap-2 mb-2 items-center"><Chip on={!dk} onClick={()=>setD(false)}>흰 배경</Chip><Chip on={dk} onClick={()=>setD(true)}>검정 배경</Chip>
+   {pages>1&&<span className="flex gap-2 ml-auto">{[...Array(pages).keys()].map(k=><Chip key={k} on={p===k} onClick={()=>setPg(k)}>{k+1}</Chip>)}</span>}</div>
+  {url?<img src={url} alt="카드 미리보기" className="mx-auto w-full max-w-[320px] rounded-2xl border border-bd"/>:<div className="mx-auto w-full max-w-[320px] aspect-[9/16] rounded-2xl border border-bd bg-sf flex items-center justify-center text-sm text-mu">만드는 중…</div>}
   <div className="flex gap-2 mt-3"><button disabled={busy} onClick={()=>exp(false)} className="flex-1 py-2 rounded-lg bg-ac text-bg disabled:opacity-40">{busy?'만드는 중…':'이미지 저장·공유'}</button>
    {pages>1&&<button disabled={busy} onClick={()=>exp(true)} className="px-4 py-2 rounded-lg border border-bd disabled:opacity-40">전체 {pages}장</button>}</div>
-  <p className="text-xs text-mu mt-2">표지 서버가 허용하지 않는 작품은 제목 카드로 대체돼요.</p></div>};
+  <p className="text-xs text-mu mt-2">공유용이라 진행 상태·별점은 넣지 않아요. 표지 서버가 허용하지 않는 작품은 제목 카드로 대체돼요.</p></div>};
 
 /* ---- 통계 ---- */
 const PRS=[['month','이번 달'],['30','30일'],['year','올해'],['365','1년'],['all','전체'],['custom','직접']];
@@ -515,7 +514,7 @@ const Library=({db,cfg,set,open,add,setDb})=>{
    <button onClick={()=>setRev(!rev)} aria-label="정렬 방향 바꾸기" className="w-9 h-9 rounded-lg border border-bd text-mu flex items-center justify-center"><Ic n={rev?'up':'down'}/></button>
    <Chip on={bm} onClick={()=>{setBm(!bm);setBs({})}}>선택</Chip><span className="text-xs text-mu ml-auto">{list.length}개</span></div>
   {!list.length?<Empty t="아직 기록이 없어요"/>:view==='full'?list.map(i=>wrap(i)(<Full key={i.id} it={i} set={set} open={pick}/>))
-   :view==='compact'?list.map(i=>wrap(i)(<button key={i.id} onClick={()=>pick(i.id)} className="fade w-full flex items-center gap-3 py-2 border-b border-bd text-left"><Ic n={stOf(i.status).i} s={15} c="text-ac shrink-0"/><span className="truncate flex-1">{i.title}</span><span className="text-xs text-mu shrink-0">{i.year}</span></button>))
+   :view==='compact'?list.map(i=>wrap(i)(<button key={i.id} onClick={()=>pick(i.id)} style={tbg(i.type)} className="fade w-full flex items-center gap-3 py-2 px-3 mb-1 rounded-lg text-left"><Ic n={stOf(i.status).i} s={15} c="text-ac shrink-0"/><span className="truncate flex-1">{i.title}</span><span className="text-xs text-mu shrink-0">{i.year}</span></button>))
    :<div className="fade grid grid-cols-3 sm:grid-cols-4 gap-3">{list.map(i=>wrap(i)(<Mini key={i.id} it={i} open={pick} sub/>))}</div>}
   </>}
   {bm&&mode==='items'&&<div className="fixed inset-x-0 z-30 bg-bg border-t border-bd" style={{bottom:'calc(46px + env(safe-area-inset-bottom))'}}><div className="max-w-2xl mx-auto px-3 py-2 flex items-center gap-2 overflow-x-auto text-sm">
@@ -550,7 +549,7 @@ const Timeline=({db,set,open})=>{
    <div className="grid grid-cols-7 text-center text-xs text-mu mb-1">{WD.map(w=><span key={w}>{w}</span>)}</div>
    <div className="grid grid-cols-7 gap-px bg-bd border border-bd">{cells.map((c,i)=>{const ds=c?`${ym}-${String(c).padStart(2,'0')}`:'';const l=by[ds]||[];
     return <div key={i} className="bg-bg min-h-[64px] p-0.5">{c&&<><span className={'text-[10px] '+(ds===today()?'text-ac font-medium':'text-mu')}>{c}</span>
-     <div className="flex flex-col gap-0.5 mt-0.5">{l.slice(0,2).map(it=><button key={it.id} onClick={()=>open(it.id)}><Cover it={it} c="w-full !aspect-[3/2] !rounded-sm"/></button>)}{l.length>2&&<span className="text-[10px] text-mu">+{l.length-2}</span>}</div></>}</div>})}</div></div>}
+     <div className="flex flex-col gap-0.5 mt-0.5">{l.slice(0,2).map(it=><button key={it.id} onClick={()=>open(it.id)} style={tbg(it.type)} className="p-0.5 rounded"><Cover it={it} c="w-full !aspect-[3/2] !rounded-sm"/></button>)}{l.length>2&&<span className="text-[10px] text-mu">+{l.length-2}</span>}</div></>}</div>})}</div></div>}
  else if(v==='day'){const l=by[day]||[];const d=new Date(day+'T00:00:00');
   body=<div><div className="flex items-center justify-between mb-4"><button onClick={()=>setDay(addDay(day,-1))}><Ic n="cl"/></button>
    <div className="text-center"><p className="text-5xl hd">{d.getDate()}</p><p className="text-sm text-mu">{d.getFullYear()}.{d.getMonth()+1} {WD[d.getDay()]}요일</p></div><button onClick={()=>setDay(addDay(day,1))}><Ic n="cr"/></button></div>
@@ -569,7 +568,7 @@ const Timeline=({db,set,open})=>{
   body=<><div className="flex items-center gap-2 mb-2"><span className="text-xs text-mu">단위</span>{[['일',wkz()],['주',12],['월',3]].map(([l,z],n)=><Chip key={l} on={lvl===n} onClick={()=>setZm(z)}>{l}</Chip>)}</div><div className="overflow-x-auto"><div className="relative" style={{height:H,minWidth:62+lanes.length*124,touchAction:'pan-x pan-y'}}
     onTouchStart={e=>{if(e.touches.length===2)pin.current={d:dist(e),z:zm}}} onTouchMove={e=>{if(e.touches.length===2&&pin.current)setZm(cz(pin.current.z*dist(e)/pin.current.d))}} onTouchEnd={()=>{pin.current=null}}>
    {marks.map(m=><div key={m.k} className={'absolute inset-x-0 flex items-end border-b text-[10px] pl-1 leading-none '+(m.c===2?'border-mu text-tx font-medium':m.c===1?'border-bd text-mu':'border-bd text-mu opacity-70')} style={{top:Math.max(m.y-16,0),height:16}}>{m.l}</div>)}
-   {pl.map(r=><button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute flex gap-1.5 text-left" style={{left:62+r.k*124,top:r.y1,width:118,height:r.h}}>
+   {pl.map(r=><button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute flex gap-1.5 text-left rounded-md pr-1" style={{...tbg(r.i.type),left:62+r.k*124,top:r.y1,width:118,height:r.h}}>
     <span className="w-1.5 rounded-full bg-ac shrink-0" style={{height:r.bh,opacity:r.i.status==='done'?1:.5}}/>
     <span className="text-xs leading-tight break-words" style={{display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:Math.min(4,Math.max(2,Math.floor(r.h/14))),overflow:'hidden'}}>{r.i.title}</span></button>)}</div></div>
    <div className="fixed right-4 bottom-20 z-20 flex flex-col gap-2">{[['plus',1.5,'확대'],['minus',1/1.5,'축소']].map(([n,z,l])=><button key={n} aria-label={l} onClick={()=>zoom(z)} className="w-10 h-10 rounded-full bg-bg border border-bd text-tx flex items-center justify-center"><Ic n={n}/></button>)}</div></>}
@@ -584,7 +583,7 @@ const Timeline=({db,set,open})=>{
 const ACC=['#859900','#6c8f7e','#b58900','#2aa198','#268bd2','#a89f8a','#cb4b16','#d33682','#6c71c4'];
 const FONTS={sys:['시스템 기본','-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif'],noto:['Noto Sans KR','"Noto Sans KR",sans-serif'],serif:['Noto Serif KR (명조)','"Noto Serif KR",serif'],plex:['IBM Plex Sans KR','"IBM Plex Sans KR",sans-serif'],dodum:['고운돋움','"Gowun Dodum",sans-serif'],mono:['고정폭','ui-monospace,SFMono-Regular,Menlo,"D2Coding",monospace']};
 const Settings=({db,setDb,cfg,setCfg})=>{
- const [et,setEt]=S('');const [es,setEs]=S('');const [pend,setPend]=S(null);const [it,setIt]=S('');const [is,setIs]=S('');const [nt,setNt]=S('');const [ist,setIst]=S('');const [prog,setProg]=S(null);
+ const [et,setEt]=S('');const [es,setEs]=S('');const [pend,setPend]=S(null);const [it,setIt]=S('');const [is,setIs]=S('');const [nt,setNt]=S('');const [xd,setXd]=S(xdark());const [ist,setIst]=S('');const [prog,setProg]=S(null);
  const pick=(t,s)=>db.items.filter(i=>(!t||i.type===t)&&(!s||i.status===s));
  const Sel=({v,s})=><div className="flex gap-2"><select value={v[0]} onChange={e=>v[1](e.target.value)}><option value="">모든 종류</option>{db.types.map(x=><option key={x.id} value={x.id}>{x.l}</option>)}</select>
   <select value={s[0]} onChange={e=>s[1](e.target.value)}><option value="">모든 상태</option>{ST.map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>;
@@ -607,6 +606,7 @@ const Settings=({db,setDb,cfg,setCfg})=>{
    <div className="flex gap-3 flex-wrap">{ACC.map(c=><button key={c} aria-label={c} onClick={()=>setCfg({...cfg,accent:c})} style={{background:c}} className={'w-8 h-8 rounded-full '+(cfg.accent===c?'ring-2 ring-offset-2 ring-tx ring-offset-bg':'')}/>)}</div></Sec>
   <Sec t="글자 색"><div className="flex gap-3 flex-wrap items-center">{['#073642','#111111','#2b2622','#4a4a4a','#eee8d5','#ededed','#eceff4'].map(c=><button key={c} aria-label={c} onClick={()=>setCfg({...cfg,tx:c})} style={{background:c}} className={'w-8 h-8 rounded-full border border-bd '+(cfg.tx===c?'ring-2 ring-offset-2 ring-ac ring-offset-bg':'')}/>)}
    <input type="color" aria-label="직접 선택" value={cfg.tx||'#073642'} onChange={e=>setCfg({...cfg,tx:e.target.value})} className="!w-10 !h-8 !p-0"/><Chip on={!cfg.tx} onClick={()=>setCfg({...cfg,tx:''})}>테마 기본</Chip></div></Sec>
+  <Sec t="내보내기 카드 배경 (앱 테마와 별개)"><div className="flex gap-2">{[[false,'흰 배경'],[true,'검정 배경']].map(([v,l])=><Chip key={l} on={xd===v} onClick={()=>{localStorage.setItem('rec.xdark',v?'1':'');setXd(v)}}>{l}</Chip>)}</div></Sec>
   <Sec t="글꼴"><div className="flex gap-2 flex-wrap">{Object.entries(FONTS).map(([k,v])=><Chip key={k} on={(cfg.font||'sys')===k} onClick={()=>setCfg({...cfg,font:k})}>{v[0]}</Chip>)}</div>
    <div className="flex gap-2 flex-wrap">{[[300,'가늘게'],[400,'보통']].map(([w,l])=><Chip key={w} on={(cfg.fw||300)===w} onClick={()=>setCfg({...cfg,fw:w})}>{l}</Chip>)}</div></Sec>
   <Sec t="글자 크기"><div className="flex gap-2 flex-wrap">{[[14,'작게'],[16,'보통'],[18,'크게'],[20,'아주 크게']].map(([z,l])=><Chip key={z} on={(cfg.fsize||16)===z} onClick={()=>setCfg({...cfg,fsize:z})}>{l}</Chip>)}</div></Sec>
@@ -632,7 +632,11 @@ const Settings=({db,setDb,cfg,setCfg})=>{
 function App(){
  const [db,setDb]=S(()=>{const d=load('rec.db',{types:[{id:'book',l:'책'},{id:'movie',l:'영화'},{id:'drama',l:'드라마'}],items:[],lists:[]});if(!d.types.some(x=>x.id==='drama'))d.types=[...d.types,{id:'drama',l:'드라마'}];return d});
  const [cfg,setCfg]=S(()=>load('rec.cfg',{theme:'light',accent:'#859900',nlk:'',tmdb:'',proxy:''}));
- const [tab,setTab]=S('lib');const [sel,setSel]=S(null);const [np,setNp]=S(null);
+ const [tab,setTab]=S('lib');const sc=R({}),pt=R('lib');
+ const go=k=>{sc.current[pt.current]=window.scrollY;pt.current=k;setTab(k)};
+ React.useLayoutEffect(()=>{window.scrollTo(0,sc.current[tab]||0)},[tab]);
+ const [top,setTop]=S(false);E(()=>{const f=()=>setTop(scrollY>600);f();addEventListener('scroll',f,{passive:true});return()=>removeEventListener('scroll',f)},[]);
+ const V=k=>({display:tab===k?'block':'none'});const [sel,setSel]=S(null);const [np,setNp]=S(null);
  E(()=>{localStorage.setItem('rec.db',JSON.stringify(db))},[db]);
  E(()=>{localStorage.setItem('rec.cfg',JSON.stringify(cfg));const r=document.documentElement;
   const mq=matchMedia('(prefers-color-scheme: dark)');const ap=()=>{r.dataset.t=cfg.theme==='auto'?(mq.matches?'dark':'light'):cfg.theme;r.style.setProperty('--ac',cfg.accent);cfg.tx?r.style.setProperty('--tx',cfg.tx):r.style.removeProperty('--tx');r.style.fontSize=(cfg.fsize||16)+'px';r.style.setProperty('--ff',(FONTS[cfg.font]||FONTS.sys)[1]);r.style.setProperty('--fw',cfg.fw||300)};ap();mq.addEventListener('change',ap);return()=>mq.removeEventListener('change',ap)},[cfg]);
@@ -651,14 +655,15 @@ function App(){
  if(cur&&cur.status==='playing'&&!cur.startedAt)upd(cur.id,{startedAt:today()});
  const T=[['lib','라이브러리','lib'],['now','감상중','play'],['tl','타임라인','cal'],['set','설정','set']];
  return <QC.Provider value={{qset,ranks,lists:db.lists,addList,openNote:setNp,cfg}}><div className="max-w-2xl mx-auto px-4 pb-20 min-h-screen" style={{paddingTop:'env(safe-area-inset-top)'}}>
-  {tab==='lib'&&<Library db={db} cfg={cfg} set={set} open={setSel} add={add} setDb={setDb}/>}
-  {tab==='now'&&<Playing db={db} set={set} open={setSel}/>}
-  {tab==='tl'&&<Timeline db={db} set={set} open={setSel}/>}
-  {tab==='set'&&<Settings db={db} setDb={setDb} cfg={cfg} setCfg={setCfg}/>}
+  <div style={V('lib')}><Library db={db} cfg={cfg} set={set} open={setSel} add={add} setDb={setDb}/></div>
+  <div style={V('now')}><Playing db={db} set={set} open={setSel}/></div>
+  <div style={V('tl')}><Timeline db={db} set={set} open={setSel}/></div>
+  <div style={V('set')}><Settings db={db} setDb={setDb} cfg={cfg} setCfg={setCfg}/></div>
   {npi&&<NotePage it={npi} upd={upd} close={()=>setNp(null)}/>}
   {cur&&<Detail it={cur} set={set} upd={upd} del={del} close={()=>setSel(null)} page={id=>{setSel(null);setNp(id)}}/>}
+  {top&&<button onClick={()=>scrollTo({top:0,behavior:'smooth'})} aria-label="맨 위로" className="fade fixed right-4 z-30 w-11 h-11 rounded-full bg-ac text-bg shadow-lg flex items-center justify-center" style={{bottom:'calc(104px + env(safe-area-inset-bottom))'}}><Ic n="up" s={20}/></button>}
   <nav className="fixed bottom-0 inset-x-0 bg-bg border-t border-bd z-30" style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
-   <div className="max-w-2xl mx-auto grid grid-cols-4">{T.map(([k,l,i])=><button key={k} onClick={()=>setTab(k)} className={'py-1.5 flex flex-col items-center text-[10px] '+(tab===k?'text-ac':'text-mu')}><Ic n={i} s={18}/>{l}</button>)}</div></nav>
+   <div className="max-w-2xl mx-auto grid grid-cols-4">{T.map(([k,l,i])=><button key={k} onClick={()=>go(k)} className={'py-1.5 flex flex-col items-center text-[10px] '+(tab===k?'text-ac':'text-mu')}><Ic n={i} s={18}/>{l}</button>)}</div></nav>
  </div></QC.Provider>}
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script></body></html>
