@@ -152,7 +152,10 @@ const QBtn=({it})=>{const {qset,ranks}=React.useContext(QC);const r=ranks[it.id]
    <button onClick={()=>{qset(it.id,'end');setO(false)}} aria-label="대기열 맨 끝에 추가" title="맨 끝에" className="w-9 h-8 rounded-md hover:bg-sf flex items-center justify-center"><Ic n="down" s={16}/></button>
    {it.q&&<button onClick={()=>{qset(it.id,null);setO(false)}} aria-label="대기열에서 제거" className="w-9 h-8 rounded-md text-mu hover:bg-sf flex items-center justify-center"><Ic n="x" s={14}/></button>}</div>}</span>};
 const TC={book:'#e6b422',movie:'#4a90d9',drama:'#d96aa7'},XC=['#5bb381','#8d78e0','#e8905a','#3fb9c2'];
-const tbg=id=>({background:`color-mix(in srgb, ${TC[id]||XC[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%XC.length]} 26%, var(--bg))`});
+/* 상태별 농도·채도: [색 비율(1=원색, 낮을수록 회색 섞임), 배경에 섞는 %]. 중단=회색 고정, 일시정지=감상중과 동일 */
+const SM={playing:[1,36],paused:[1,36],done:[1,13],planned:[.55,24],ref:[.3,18],_:[1,26]};
+const tbg=(id,st)=>{if(st==='dropped')return{background:'color-mix(in srgb, #8c8c8c 20%, var(--bg))'};const[k,p]=SM[st]||SM._;
+ const h=TC[id]||XC[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%XC.length];return{background:`color-mix(in srgb, color-mix(in srgb, ${h} ${k*100}%, #8c8c8c) ${p}%, var(--bg))`}};
 const nn=it=>(it.notes||(it.note?[1]:[])).length;
 const RL=it=>it.type==='book'?'정독비율':'집중비율';
 const LBtn=({it})=>{const {lists,addList}=React.useContext(QC);const [o,setO]=S(false);const L=(lists||[]).filter(l=>l.type===it.type);
@@ -161,7 +164,7 @@ const LBtn=({it})=>{const {lists,addList}=React.useContext(QC);const [o,setO]=S(
    {L.map(l=>{const has=l.body.includes('[['+it.id+']]');return <button key={l.id} disabled={has} onClick={()=>{addList(l.id,it.id);setO(false)}} className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-sf truncate disabled:text-mu">{has?'✓ ':''}{l.title||'제목 없음'}</button>})}</div>}</span>};
 const NBtn=({it})=>{const {openNote}=React.useContext(QC);const n=nn(it);
  return <button onClick={()=>openNote(it.id)} aria-label="메모 페이지" className="h-8 px-1.5 rounded-full flex items-center gap-1 text-mu hover:bg-sf shrink-0"><Ic n="msg" s={16}/>{n>0&&<span className="text-[10px] leading-4 px-1.5 rounded-full border border-bd text-tx">{n}</span>}</button>};
-const Full=({it,set,open})=><div style={tbg(it.type)} className="flex gap-3 p-3 mb-2 rounded-xl">
+const Full=({it,set,open})=><div style={tbg(it.type,it.status)} className="flex gap-3 p-3 mb-2 rounded-xl">
  <button onClick={()=>open(it.id)} className="w-16 shrink-0"><Cover it={it} c="w-16"/></button>
  <div className="min-w-0 flex-1">
   <div className="flex items-start gap-1"><button onClick={()=>open(it.id)} className="hd text-left block min-w-0 flex-1 truncate">{it.title}</button><LBtn it={it}/><NBtn it={it}/><QBtn it={it}/></div>
@@ -169,7 +172,7 @@ const Full=({it,set,open})=><div style={tbg(it.type)} className="flex gap-3 p-3 
   <p className="text-xs text-mu mt-1">{stOf(it.status).l}{dateOf(it)&&' · '+dateOf(it)}</p>
   <div className="mt-1 -ml-1"><StatusBar it={it} set={set}/></div>
   {it.status==='done'&&(it.read>0||it.rating>0||it.review)&&<p className="text-[11px] text-mu mt-1 flex items-center gap-1.5 min-w-0">{it.read>0&&<span className="shrink-0">{RL(it).slice(0,2)} {it.read}%</span>}{it.rating>0&&<span className="text-ac shrink-0">★{it.rating}</span>}{it.review&&<span className="truncate">{it.review}</span>}</p>}</div></div>;
-const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} style={tbg(it.type)} className="text-left w-full p-1.5 rounded-lg"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
+const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} style={tbg(it.type,it.status)} className="text-left w-full p-1.5 rounded-lg"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
 
 /* ---- 마크다운(간이) ---- */
 const md=s=>{let h=s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -314,7 +317,7 @@ const Refresh=({it,upd,close})=>{const {cfg}=React.useContext(QC);
   {res.map((r,i)=><button key={i} disabled={busy} onClick={()=>apply(r)} className="w-full flex gap-3 py-2 border-b border-bd items-center text-left"><Cover it={r} c="w-10 shrink-0"/><span className="flex-1 min-w-0"><span className="block truncate">{r.title}</span><span className="block text-xs text-mu truncate">{[r.sub,r.creator,r.year].filter(Boolean).join(' · ')}</span></span></button>)}</>}</Modal>};
 const RefreshBtn=({it,upd})=>{const [o,setO]=S(false);return <><button onClick={()=>setO(true)} className="mt-2 text-sm text-ac">정보 갱신 (다시 검색해 병합)</button>{o&&<Refresh it={it} upd={upd} close={()=>setO(false)}/>}</>};
 /* ---- 상세(full 팝업) ---- */
-const Detail=({it,set,upd,del,close,page})=><Modal onClose={close} style={tbg(it.type)}>
+const Detail=({it,set,upd,del,close,page})=><Modal onClose={close} style={tbg(it.type,it.status)}>
  <div className="flex gap-4"><Cover it={it} c="w-24 shrink-0"/>
   <div className="flex-1 min-w-0 space-y-2"><input value={it.title} onChange={e=>upd(it.id,{title:e.target.value})} className="hd"/>
    {(it.type==='movie'||it.sub)&&<input placeholder="보조 제목 (한글/영어)" value={it.sub||''} onChange={e=>upd(it.id,{sub:e.target.value})}/>}
@@ -514,7 +517,7 @@ const Library=({db,cfg,set,open,add,setDb})=>{
    <button onClick={()=>setRev(!rev)} aria-label="정렬 방향 바꾸기" className="w-9 h-9 rounded-lg border border-bd text-mu flex items-center justify-center"><Ic n={rev?'up':'down'}/></button>
    <Chip on={bm} onClick={()=>{setBm(!bm);setBs({})}}>선택</Chip><span className="text-xs text-mu ml-auto">{list.length}개</span></div>
   {!list.length?<Empty t="아직 기록이 없어요"/>:view==='full'?list.map(i=>wrap(i)(<Full key={i.id} it={i} set={set} open={pick}/>))
-   :view==='compact'?list.map(i=>wrap(i)(<button key={i.id} onClick={()=>pick(i.id)} style={tbg(i.type)} className="fade w-full flex items-center gap-3 py-2 px-3 mb-1 rounded-lg text-left"><Ic n={stOf(i.status).i} s={15} c="text-ac shrink-0"/><span className="truncate flex-1">{i.title}</span><span className="text-xs text-mu shrink-0">{i.year}</span></button>))
+   :view==='compact'?list.map(i=>wrap(i)(<button key={i.id} onClick={()=>pick(i.id)} style={tbg(i.type,i.status)} className="fade w-full flex items-center gap-3 py-2 px-3 mb-1 rounded-lg text-left"><Ic n={stOf(i.status).i} s={15} c="text-ac shrink-0"/><span className="truncate flex-1">{i.title}</span><span className="text-xs text-mu shrink-0">{i.year}</span></button>))
    :<div className="fade grid grid-cols-3 sm:grid-cols-4 gap-3">{list.map(i=>wrap(i)(<Mini key={i.id} it={i} open={pick} sub/>))}</div>}
   </>}
   {bm&&mode==='items'&&<div className="fixed inset-x-0 z-30 bg-bg border-t border-bd" style={{bottom:'calc(46px + env(safe-area-inset-bottom))'}}><div className="max-w-2xl mx-auto px-3 py-2 flex items-center gap-2 overflow-x-auto text-sm">
@@ -549,7 +552,7 @@ const Timeline=({db,set,open})=>{
    <div className="grid grid-cols-7 text-center text-xs text-mu mb-1">{WD.map(w=><span key={w}>{w}</span>)}</div>
    <div className="grid grid-cols-7 gap-px bg-bd border border-bd">{cells.map((c,i)=>{const ds=c?`${ym}-${String(c).padStart(2,'0')}`:'';const l=by[ds]||[];
     return <div key={i} className="bg-bg min-h-[64px] p-0.5">{c&&<><span className={'text-[10px] '+(ds===today()?'text-ac font-medium':'text-mu')}>{c}</span>
-     <div className="flex flex-col gap-0.5 mt-0.5">{l.slice(0,2).map(it=><button key={it.id} onClick={()=>open(it.id)} style={tbg(it.type)} className="p-0.5 rounded"><Cover it={it} c="w-full !aspect-[3/2] !rounded-sm"/></button>)}{l.length>2&&<span className="text-[10px] text-mu">+{l.length-2}</span>}</div></>}</div>})}</div></div>}
+     <div className="flex flex-col gap-0.5 mt-0.5">{l.slice(0,2).map(it=><button key={it.id} onClick={()=>open(it.id)} style={tbg(it.type,it.status)} className="p-0.5 rounded"><Cover it={it} c="w-full !aspect-[3/2] !rounded-sm"/></button>)}{l.length>2&&<span className="text-[10px] text-mu">+{l.length-2}</span>}</div></>}</div>})}</div></div>}
  else if(v==='day'){const l=by[day]||[];const d=new Date(day+'T00:00:00');
   body=<div><div className="flex items-center justify-between mb-4"><button onClick={()=>setDay(addDay(day,-1))}><Ic n="cl"/></button>
    <div className="text-center"><p className="text-5xl hd">{d.getDate()}</p><p className="text-sm text-mu">{d.getFullYear()}.{d.getMonth()+1} {WD[d.getDay()]}요일</p></div><button onClick={()=>setDay(addDay(day,1))}><Ic n="cr"/></button></div>
@@ -568,7 +571,7 @@ const Timeline=({db,set,open})=>{
   body=<><div className="flex items-center gap-2 mb-2"><span className="text-xs text-mu">단위</span>{[['일',wkz()],['주',12],['월',3]].map(([l,z],n)=><Chip key={l} on={lvl===n} onClick={()=>setZm(z)}>{l}</Chip>)}</div><div className="overflow-x-auto"><div className="relative" style={{height:H,minWidth:62+lanes.length*124,touchAction:'pan-x pan-y'}}
     onTouchStart={e=>{if(e.touches.length===2)pin.current={d:dist(e),z:zm}}} onTouchMove={e=>{if(e.touches.length===2&&pin.current)setZm(cz(pin.current.z*dist(e)/pin.current.d))}} onTouchEnd={()=>{pin.current=null}}>
    {marks.map(m=><div key={m.k} className={'absolute inset-x-0 flex items-end border-b text-[10px] pl-1 leading-none '+(m.c===2?'border-mu text-tx font-medium':m.c===1?'border-bd text-mu':'border-bd text-mu opacity-70')} style={{top:Math.max(m.y-16,0),height:16}}>{m.l}</div>)}
-   {pl.map(r=><button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute flex gap-1.5 text-left rounded-md pr-1" style={{...tbg(r.i.type),left:62+r.k*124,top:r.y1,width:118,height:r.h}}>
+   {pl.map(r=><button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute flex gap-1.5 text-left rounded-md pr-1" style={{...tbg(r.i.type,r.i.status),left:62+r.k*124,top:r.y1,width:118,height:r.h}}>
     <span className="w-1.5 rounded-full bg-ac shrink-0" style={{height:r.bh,opacity:r.i.status==='done'?1:.5}}/>
     <span className="text-xs leading-tight break-words" style={{display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:Math.min(4,Math.max(2,Math.floor(r.h/14))),overflow:'hidden'}}>{r.i.title}</span></button>)}</div></div>
    <div className="fixed right-4 bottom-20 z-20 flex flex-col gap-2">{[['plus',1.5,'확대'],['minus',1/1.5,'축소']].map(([n,z,l])=><button key={n} aria-label={l} onClick={()=>zoom(z)} className="w-10 h-10 rounded-full bg-bg border border-bd text-tx flex items-center justify-center"><Ic n={n}/></button>)}</div></>}
