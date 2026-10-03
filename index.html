@@ -52,7 +52,7 @@ button{transition:background .15s,color .15s,opacity .15s}
 <body><div id="root"></div>
 <script type="text/babel">
 const {useState:S,useEffect:E,useMemo:M,useRef:R}=React;
-const P={sort:'<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>',sel:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',film:'<rect x="2" y="2" width="20" height="20" rx="2.2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>',filt:'<polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/>',pl:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',pr:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/>',play:'<polygon points="6 3 20 12 6 21 6 3"/>',pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',stop:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',check:'<path d="M20 6 9 17l-5-5"/>',plan:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',ref:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',plus:'<path d="M5 12h14M12 5v14"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',lib:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',set:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',star:'<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',cl:'<path d="m15 18-6-6 6-6"/>',cr:'<path d="m9 18 6-6-6-6"/>',tr:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',ul:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',queue:'<path d="M11 12H3M16 6H3M16 18H3M18 9v6M21 12h-6"/>',up:'<path d="m18 15-6-6-6 6"/>',down:'<path d="m6 9 6 6 6-6"/>',minus:'<path d="M5 12h14"/>',reply:'<path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',msg:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>'};
+const P={link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',aim:'<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',sort:'<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>',sel:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',film:'<rect x="2" y="2" width="20" height="20" rx="2.2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>',filt:'<polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/>',pl:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',pr:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/>',play:'<polygon points="6 3 20 12 6 21 6 3"/>',pause:'<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',stop:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',check:'<path d="M20 6 9 17l-5-5"/>',plan:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',ref:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',plus:'<path d="M5 12h14M12 5v14"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',lib:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',set:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',star:'<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',cl:'<path d="m15 18-6-6 6-6"/>',cr:'<path d="m9 18 6-6-6-6"/>',tr:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',ul:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',expand:'<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',queue:'<path d="M11 12H3M16 6H3M16 18H3M18 9v6M21 12h-6"/>',up:'<path d="m18 15-6-6-6 6"/>',down:'<path d="m6 9 6 6 6-6"/>',minus:'<path d="M5 12h14"/>',reply:'<path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',msg:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>'};
 const Ic=({n,s=18,c='',f})=><svg width={s} height={s} viewBox="0 0 24 24" fill={f?'currentColor':'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={c} dangerouslySetInnerHTML={{__html:P[n]}}/>;
 const ST=[{k:'playing',l:'감상중',i:'play'},{k:'paused',l:'일시정지',i:'pause'},{k:'dropped',l:'중단',i:'stop'},{k:'done',l:'완료',i:'check'},{k:'planned',l:'예정',i:'plan'},{k:'ref',l:'참고용',i:'ref'}];
 const stOf=k=>ST.find(s=>s.k===k)||ST[4];
@@ -138,7 +138,7 @@ PROV.tmdbtv.detail=async(r,c)=>{const d=await tm('tv/'+r.extId,c,'&append_to_res
  const kr=(d.content_ratings?.results||[]).find(x=>x.iso_3166_1==='KR')?.rating;const by=(d.created_by||[]).map(x=>x.name);
  return{creator:by.join(', '),tags:gt((d.genres||[]).map(g=>g.id)),meta:mk({원제:d.original_name,태그라인:d.tagline,줄거리:d.overview,방영:[d.first_air_date,d.status==='Ended'||d.status==='Canceled'?d.last_air_date:''].filter(Boolean).join(' ~ '),상태:d.status,유형:d.type,시즌:d.number_of_seasons,'총 에피소드':d.number_of_episodes,'회당 시간':(d.episode_run_time||[])[0]?d.episode_run_time[0]+'분':'','시즌 구성':(d.seasons||[]).filter(x=>x.season_number>0).map(x=>`S${x.season_number} ${x.episode_count}화${x.air_date?' ('+x.air_date+')':''}`).join('\n'),방송사:(d.networks||[]).map(x=>x.name),크리에이터:by,출연:names(d.credits?.cast).slice(0,12),제작사:(d.production_companies||[]).map(x=>x.name),제작국가:d.origin_country,언어:(d.languages||[]).map(ln),원어:ln(d.original_language),'관람등급(KR)':kr,'TMDB 평점':d.vote_average?d.vote_average.toFixed(1)+' ('+d.vote_count+')':'',홈페이지:d.homepage,IMDb:d.external_ids?.imdb_id,'TMDB ID':d.id})}};
 /* ---- CSV ---- */
-const COLS=['id','type','title','creator','year','status','rating','startedAt','finishedAt','note','cover','source','extId','tags','notes','meta','read','review','sub','rel'];
+const COLS=['id','type','title','creator','year','status','rating','startedAt','finishedAt','note','cover','source','extId','tags','notes','meta','read','review','sub','rel','prog','urls'];
 const pj=v=>{if(Array.isArray(v))return v;try{return JSON.parse(v)||[]}catch(e){return[]}};
 const pjo=v=>{if(v&&typeof v==='object')return v;try{return JSON.parse(v)||{}}catch(e){return{}}};
 const csvEsc=v=>{v=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
@@ -158,8 +158,8 @@ const toRIS=(items,types,o={})=>{const out=[];
   ln('PB',pk('출판사','제작사','방송사'));ln('T2',pk('시리즈','총서'));ln('ET',pk('판사항'));ln('VL',pk('권차','총서 번호'));
   ln('SN',pk('ISBN-13','ISBN-10','ISBN'));ln('LA',pk('언어','원어'));ln('AB',pk('책소개','소개','줄거리'));
   (i.tags||[]).forEach(t=>ln('KW',t));
-  const tu=i.extId&&(i.source==='tmdb'?'movie':i.source==='tmdbtv'?'tv':'');ln('UR',pk('링크','홈페이지')||(tu?`https://www.themoviedb.org/${tu}/${i.extId}`:''));
-  if(o.rec!==false){const L=['[기록앱]','종류: '+i.type,'상태: '+stOf(i.status).l];if(i.rating)L.push('평가: '+i.rating+'/5');if(i.read)L.push(RL(i)+': '+i.read+'%');if(i.review)L.push('총평: '+i.review);if(i.startedAt)L.push('시작: '+i.startedAt);if(i.finishedAt)L.push('완료: '+i.finishedAt);
+  const tu=i.extId&&(i.source==='tmdb'?'movie':i.source==='tmdbtv'?'tv':'');ln('UR',pk('링크','홈페이지')||(tu?`https://www.themoviedb.org/${tu}/${i.extId}`:''));(i.urls||[]).forEach(x=>ln('UR',x.u));
+  if(o.rec!==false){const L=['[기록앱]','종류: '+i.type,'상태: '+stOf(i.status).l];if(i.rating)L.push('평가: '+i.rating+'/5');if(i.read)L.push(RL(i)+': '+i.read+'%');if(i.review)L.push('총평: '+i.review);if(i.prog&&Object.keys(i.prog).length)L.push('진도: '+JSON.stringify(i.prog));if(i.startedAt)L.push('시작: '+i.startedAt);if(i.finishedAt)L.push('완료: '+i.finishedAt);
    Object.entries(m).filter(([k])=>!used.has(k)).forEach(([k,v])=>L.push('메타.'+k+': '+(/\n/.test(v)?JSON.stringify(v):v)));ln('N1',L.join('\n'))}
   if(o.memos!==false){const ns=i.notes||[];(ns.length?ns:i.note?[{t:i.added||Date.now(),text:i.note}]:[]).forEach(n=>ln('N1',`메모 (${dts(n.t)})\n${n.text}`))}
   out.push('ER  - ','')});
@@ -179,8 +179,8 @@ const parseRIS=(t,types)=>{const recs=[];let r=null,last=null;
    ...(isbn?{[isbn.length===13?'ISBN-13':'ISBN-10']:isbn}:sn?{표준번호:one('SN')}:{})}),...rm};
   const num=x=>{const v=parseFloat(x);return isFinite(v)?v:0},dd_=x=>/^\d{4}-\d\d-\d\d$/.test(x||'')?x:'';
   const notes=ns.map((x,k)=>{const m=x.match(/^메모 \((\d{4}-\d\d-\d\d)(?: (\d\d:\d\d))?\)\n?([\s\S]*)$/);return m?{id:uid(),t:new Date(`${m[1]}T${m[2]||'00:00'}:00`).getTime(),text:m[3].trim()}:{id:uid(),t:Date.now()+k,text:x}});
-  return{id:uid(),type,title:one('TI','T1')||one('T2'),sub:one('TT'),creator:cr,year:(one('PY','Y1','DA').match(/\d{4}/)||[''])[0],status:(ST.find(x=>x.l===rec.상태)||{}).k||'planned',rating:Math.min(5,Math.max(0,num(rec.평가))),read:Math.min(100,Math.max(0,num(rec.정독비율||rec.집중비율))),review:(rec.총평||'').slice(0,60),
-   startedAt:dd_(rec.시작),finishedAt:dd_(rec.완료),note:'',cover:'',source:'ris',extId:type==='book'?isbn:'',tags:[...new Set(g('KW').flatMap(x=>x.split(/\s*;\s*/)).filter(Boolean))],notes,meta}}).filter(i=>i.title)};
+  return{id:uid(),type,title:one('TI','T1')||one('T2'),sub:one('TT'),creator:cr,year:(one('PY','Y1','DA').match(/\d{4}/)||[''])[0],status:(ST.find(x=>x.l===rec.상태)||{}).k||'planned',rating:Math.min(5,Math.max(0,num(rec.평가))),read:Math.min(100,Math.max(0,num(rec.정독비율||rec.집중비율))),review:(rec.총평||'').slice(0,60),...(()=>{try{const v=JSON.parse(rec.진도);return v&&typeof v==='object'?{prog:v}:{}}catch(e){return{}}})(),
+   startedAt:dd_(rec.시작),finishedAt:dd_(rec.완료),urls:g('UR').slice(1).map(u=>({id:uid(),u})),note:'',cover:'',source:'ris',extId:type==='book'?isbn:'',tags:[...new Set(g('KW').flatMap(x=>x.split(/\s*;\s*/)).filter(Boolean))],notes,meta}}).filter(i=>i.title)};
 const toCSV=items=>'\ufeff'+[COLS.join(','),...items.map(i=>COLS.map(c=>csvEsc(i[c])).join(','))].join('\r\n');
 const parseCSV=t=>{t=t.replace(/^\ufeff/,'');const rows=[];let r=[],v='',q=false;
  for(let i=0;i<t.length;i++){const c=t[i];
@@ -191,7 +191,7 @@ const parseCSV=t=>{t=t.replace(/^\ufeff/,'');const rows=[];let r=[],v='',q=false
  const h=rows.shift()||[];return rows.filter(x=>x.some(Boolean)).map(x=>Object.fromEntries(h.map((k,i)=>[k.trim(),x[i]||''])))};
 const fromRows=(rows,types)=>rows.map(o=>{
  if('Letterboxd URI' in o)return{id:uid(),type:'movie',title:o.Name,creator:'',year:o.Year,status:'done',rating:o.Rating?+o.Rating:0,startedAt:'',finishedAt:o.Date||o['Watched Date']||'',note:'',cover:'',source:'letterboxd',extId:o['Letterboxd URI']};
- return{...o,id:o.id||uid(),type:o.type||types[0].id,status:o.status||'planned',rating:+o.rating||0,tags:pj(o.tags),notes:pj(o.notes),meta:pjo(o.meta),read:+o.read||0,review:o.review||'',rel:pj(o.rel)}}).filter(i=>i.title);
+ return{...o,id:o.id||uid(),type:o.type||types[0].id,status:o.status||'planned',rating:+o.rating||0,tags:pj(o.tags),notes:pj(o.notes),meta:pjo(o.meta),read:+o.read||0,review:o.review||'',rel:pj(o.rel),prog:pjo(o.prog),urls:pj(o.urls)}}).filter(i=>i.title);
 const dl=(name,txt,mime)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;a.click()};
 
 /* ---- 공통 UI ---- */
@@ -221,6 +221,16 @@ const Bar=({v,max,step,seg,on,label})=>{const ref=R(null),mv=R(false);const f=Ma
   <div className="absolute inset-0 rounded-full pointer-events-none" style={{backgroundImage:`repeating-linear-gradient(90deg,transparent 0,transparent calc(${100/seg}% - 2px),var(--bg) calc(${100/seg}% - 2px),var(--bg) ${100/seg}%)`}}/>
   <div className="absolute top-1/2 w-5 h-5 rounded-full bg-bg border-2 shadow pointer-events-none" style={{left:`calc((100% - 20px) * ${f})`,transform:'translateY(-50%)',borderColor:'var(--ac)'}}/></div>};
 const Meter=({v,max})=><span className="inline-block w-10 h-1.5 rounded-full bg-bg border border-bd overflow-hidden shrink-0"><span className="block h-full bg-ac" style={{width:Math.min(100,v/max*100)+'%'}}/></span>;
+/* 참고 URL: 하나씩 입력, 목록 끝에 편집·삭제 아이콘. 작품(item.urls)과 개별 목록(list.urls) 공용 */
+const urlOf=u=>{u=String(u||'').trim();return!u?'':/^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u};
+const urlLabel=u=>{try{const x=new URL(u);return x.hostname.replace(/^www\./,'')+(x.pathname!=='/'?x.pathname:'')+x.search}catch(e){return u}};
+const UrlBox=({urls,onChange,cls=''})=>{const L=urls||[];const [v,setV]=S('');const [ed,setEd]=S(null);const [ev,setEv]=S('');
+ const add=()=>{const u=urlOf(v);if(!u)return;onChange([...L,{id:uid(),u}]);setV('')};
+ const saveE=()=>{const u=urlOf(ev);if(u)onChange(L.map(x=>x.id===ed?{...x,u}:x));setEd(null)};
+ return <div className={cls}><div className="flex items-center justify-between"><span className="hd flex items-center gap-1.5"><Ic n="link" s={15}/>참고 URL</span><span className="text-[10px] leading-4 px-1.5 rounded-full border border-bd">{L.length}</span></div>
+  <div className="flex gap-2 mt-2"><input inputMode="url" autoCapitalize="none" placeholder="URL을 입력하고 추가" value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}/><button onClick={add} aria-label="URL 추가" className="px-3 rounded-lg bg-ac text-bg"><Ic n="plus" s={16}/></button></div>
+  {L.map(x=>ed===x.id?<div key={x.id} className="flex items-center gap-2 mt-2"><input autoFocus inputMode="url" value={ev} onChange={e=>setEv(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveE();if(e.key==='Escape')setEd(null)}}/><button onClick={saveE} aria-label="저장" className="text-ac"><Ic n="check" s={18}/></button><button onClick={()=>setEd(null)} aria-label="취소" className="text-mu"><Ic n="x" s={18}/></button></div>
+   :<div key={x.id} className="flex items-center gap-3 mt-2"><a href={x.u} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 truncate text-sm text-ac underline underline-offset-2">{urlLabel(x.u)}</a><button onClick={()=>{setEd(x.id);setEv(x.u)}} aria-label="편집" className="text-mu"><Ic n="edit" s={16}/></button><button onClick={()=>onChange(L.filter(y=>y.id!==x.id))} aria-label="삭제" className="text-mu"><Ic n="tr" s={16}/></button></div>)}</div>};
 const MemoSec=({it,upd,close})=>{const {openNote}=React.useContext(QC);
  return <div className="mt-4 border-t border-bd pt-3"><div className="flex items-center justify-between"><span className="hd">메모</span><span className="flex items-center gap-1.5"><button onClick={()=>{openNote(it.id);close()}} className="text-sm text-ac">메모 페이지</button><span className="text-[10px] leading-4 px-1.5 rounded-full border border-bd">{nn(it)}</span></span></div><Memos it={it} upd={upd}/></div>};
 const RelBox=({it})=>{const {items,types,link,openItem}=React.useContext(QC);const [q,setQ]=S('');const tl=id=>(types.find(x=>x.id===id)||{}).l||id;
@@ -264,6 +274,25 @@ const tbg=(id,st)=>{let c,p;if(st==='dropped'){c='#8c8c8c';p=20}else{const[k,pp]
  /* --bd를 카드 안에서 덮어써서 카드 안의 모든 구분선·칩 테두리·입력창 테두리가 카드색에 맞춰 진해짐 */
  return{background:`color-mix(in srgb, ${c} ${p}%, var(--bg))`,'--bd':`color-mix(in srgb, ${c} 52%, var(--bg))`,border:'1px solid var(--bd)'}};
 const hueOf=id=>TC[id]||XC[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%XC.length];
+/* 진도(prog): 영화=min(본 분), 책=m('page'|'pct')+v, 드라마=s(시즌)+e(에피소드), 그 외 종류(연재물 등)=ep(편)+tot(총 편수). 감상중·일시정지일 때만 표시 */
+const INP=v=>parseInt((String(v||'').match(/\d+/)||[0])[0])||0;
+const hmin=m=>`${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+const progOf=it=>{const p=it.prog,mt=it.meta||{};if(!p||(it.status!=='playing'&&it.status!=='paused'))return null;
+ if(it.type==='movie'){const m=+p.min||0,t=INP(mt.상영시간);return m?{t:hmin(m)+(t?' / '+hmin(t):''),f:t?m/t:null}:null}
+ if(it.type==='book'){const v=+p.v||0,tot=INP(mt.쪽수);if(!v)return null;return p.m==='pct'?{t:v+'%',f:v/100}:{t:tot?`${v}/${tot}쪽`:`${v}쪽`,f:tot?v/tot:null}}
+ if(it.type==='drama')return+p.s||+p.e?{t:`S${+p.s||1}-E${+p.e||0}`,f:null}:null;
+ const e=+p.ep||0,tot=+p.tot||0;return e?{t:tot?`${e}/${tot}편`:`${e}편`,f:tot?e/tot:null}:null};
+const ProgEd=({it,upd})=>{const p=it.prog||{},sp=o=>upd(it.id,{prog:{...p,...o}}),n=v=>Math.max(0,parseInt(v)||0),pg=progOf(it);
+ const F=({l,v,on})=><label className="flex items-center gap-1 text-sm">{l}<input type="number" min="0" className="!w-16 text-center" value={v||''} onChange={e=>on(n(e.target.value))}/></label>;
+ const m=+p.min||0;
+ return <div className="mt-3 border-t border-bd pt-3"><div className="flex items-center gap-2 mb-2"><span className="hd">진도</span>
+   {it.type==='book'&&<span className="flex gap-1.5 ml-auto"><Chip on={p.m!=='pct'} onClick={()=>sp({m:'page'})}>쪽</Chip><Chip on={p.m==='pct'} onClick={()=>sp({m:'pct'})}>%</Chip></span>}</div>
+  <div className="flex items-center gap-3 flex-wrap">
+   {it.type==='movie'&&<><F l="시간" v={Math.floor(m/60)} on={h=>sp({min:h*60+m%60})}/><F l="분" v={m%60} on={x=>sp({min:Math.floor(m/60)*60+Math.min(59,x)})}/></>}
+   {it.type==='book'&&<F l={p.m==='pct'?'%':'쪽'} v={p.v} on={v=>sp({v:p.m==='pct'?Math.min(100,v):v})}/>}
+   {it.type==='drama'&&<><F l="시즌" v={p.s} on={v=>sp({s:v})}/><F l="에피소드" v={p.e} on={v=>sp({e:v})}/><button onClick={()=>sp({s:p.s||1,e:(+p.e||0)+1})} className="px-3 py-1.5 rounded-lg border border-bd text-sm">+1화</button></>}
+   {!['movie','book','drama'].includes(it.type)&&<><F l="편" v={p.ep} on={v=>sp({ep:v})}/><F l="총" v={p.tot} on={v=>sp({tot:v})}/><button onClick={()=>sp({ep:(+p.ep||0)+1})} className="px-3 py-1.5 rounded-lg border border-bd text-sm">+1편</button></>}</div>
+  {pg&&<p className="text-xs text-mu mt-2 flex items-center gap-2">{pg.f!=null&&<Meter v={pg.f} max={1}/>}{pg.t}</p>}</div>};
 const nn=it=>(it.notes||(it.note?[1]:[])).length;
 const RL=it=>it.type==='book'?'정독비율':'집중비율';
 const LBtn=({it})=>{const {lists,addList}=React.useContext(QC);const [o,setO]=S(false);const L=(lists||[]).filter(l=>GR(l.type)===GR(it.type));
@@ -279,6 +308,7 @@ const Full=({it,set,open})=><div style={tbg(it.type,it.status)} className="flex 
   {it.sub&&<p className="text-sm truncate">{it.sub}</p>}<p className="text-sm text-mu truncate">{[it.creator,it.year].filter(Boolean).join(' · ')}</p>
   <p className="text-xs text-mu mt-1">{stOf(it.status).l}{dateOf(it)&&' · '+dateOf(it)}</p>
   <div className="mt-1 -ml-1"><StatusBar it={it} set={set}/></div>
+  {(pg=>pg&&<p className="text-[11px] mt-1 flex items-center gap-1.5 min-w-0"><span className="shrink-0 text-mu">진도</span>{pg.f!=null&&<Meter v={pg.f} max={1}/>}<span className="shrink-0">{pg.t}</span></p>)(progOf(it))}
   {it.status==='done'&&(it.read>0||it.rating>0||it.review)&&<p className="text-[11px] text-mu mt-1 flex items-center gap-1.5 min-w-0">{it.read>0&&<span className="shrink-0 flex items-center gap-1">{RL(it).slice(0,2)}<Meter v={it.read} max={100}/>{it.read}%</span>}{it.rating>0&&<span className="shrink-0 flex items-center gap-1"><Meter v={+it.rating} max={5}/>{(+it.rating).toFixed(1)}</span>}{it.review&&<span className="truncate">{it.review}</span>}</p>}</div></div>;
 const Mini=({it,open,sub})=><button onClick={()=>open(it.id)} style={tbg(it.type,it.status)} className="text-left w-full p-1.5 rounded-lg"><Cover it={it} c="w-full"/>{sub&&<p className="text-xs mt-1 truncate">{it.title}</p>}</button>;
 
@@ -388,6 +418,7 @@ const ListEditor=({l,db,type,setDb,cfg,open,close})=>{
   return ln.trim()?<Md key={k} s={ln.replace(tok,(a,id)=>db.items.find(i=>i.id===id)?.title||a)}/>:<div key={k} className="h-2"/>};
  return <Modal onClose={close}>
   <div className="flex items-center gap-2"><input className="hd" placeholder="목록 제목" value={x.title} onChange={e=>save({title:e.target.value})}/><button onClick={close} aria-label="닫기"><Ic n="x"/></button></div>
+  <UrlBox cls="mt-3" urls={x.urls} onChange={urls=>save({urls})}/>
   <div className="flex gap-2 my-3"><Chip on={ed} onClick={()=>{setEd(true);setCd(false)}}>편집</Chip><Chip on={!ed&&!cd} onClick={()=>{setEd(false);setCd(false)}}>보기</Chip><Chip on={cd} onClick={()=>{setEd(false);setCd(true)}}>카드</Chip></div>
   {ed?<><textarea rows="8" placeholder="텍스트를 입력하거나, 아래에서 작품을 검색해 연결하세요" value={x.body} onChange={e=>save({body:e.target.value})}/>
    <input className="mt-2" placeholder="라이브러리에서 작품 검색해 연결" value={q} onChange={e=>setQ(e.target.value)}/>
@@ -433,7 +464,8 @@ const Detail=({it,set,upd,del,close})=><Modal onClose={close} style={tbg(it.type
    <input placeholder="연도" value={it.year||''} onChange={e=>upd(it.id,{year:e.target.value})}/></div>
   <button onClick={close} className="self-start text-mu"><Ic n="x"/></button></div>
  <div className="mt-3 flex items-center justify-between"><StatusBar it={it} set={set}/><span className="text-sm text-mu">{stOf(it.status).l}</span></div>
- <div className="mt-3 space-y-2">
+ {(it.status==='playing'||it.status==='paused')&&<ProgEd it={it} upd={upd}/>}
+  <div className="mt-3 space-y-2">
   <div className="flex items-center gap-3"><span className="text-sm w-16 shrink-0">{RL(it)}</span><Bar label={RL(it)} v={it.read||0} max={100} step={5} seg={20} on={n=>upd(it.id,{read:n})}/><span className="text-sm w-12 text-right tabular-nums">{it.read||0}%</span></div>
   <div className="flex items-center gap-3"><span className="text-sm w-16 shrink-0">평가</span><Bar label="평가" v={+it.rating||0} max={5} step={.5} seg={10} on={n=>upd(it.id,{rating:n})}/><span className="text-sm w-12 text-right tabular-nums">{it.rating?(+it.rating).toFixed(1):'-'}</span></div>
   <input maxLength="60" placeholder="총평 한 줄" value={it.review||''} onChange={e=>upd(it.id,{review:e.target.value.replace(/\n/g,' ')})}/></div>
@@ -444,6 +476,7 @@ const Detail=({it,set,upd,del,close})=><Modal onClose={close} style={tbg(it.type
  <MetaEd it={it} upd={upd}/>
  <MemoSec it={it} upd={upd} close={close}/>
  <RelBox it={it}/>
+ <UrlBox cls="mt-4 border-t border-bd pt-3" urls={it.urls} onChange={urls=>upd(it.id,{urls})}/>
  <input placeholder="표지 URL" className="mt-2" value={it.cover||''} onChange={e=>upd(it.id,{cover:e.target.value})}/>
  <RefreshBtn it={it} upd={upd}/>
  <button onClick={()=>{if(confirm('삭제할까요?')){del(it.id);close()}}} className="mt-4 text-sm text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button>
@@ -600,7 +633,7 @@ const StatsView=({db,t,cfg})=>{
 const SORTS={added:['추가한 순',(a,b)=>(b.added||0)-(a.added||0)],date:['감상일 순',(a,b)=>dateOf(b).localeCompare(dateOf(a))],title:['제목 순',(a,b)=>a.title.localeCompare(b.title,'ko')],year:['연도 순',(a,b)=>(+b.year||0)-(+a.year||0)],rating:['별점 순',(a,b)=>(b.rating||0)-(a.rating||0)],creator:['지은이 순',(a,b)=>(a.creator||'힣').localeCompare(b.creator||'힣','ko')]};
 const Library=({db,cfg,set,open,setDb,grp,bar})=>{
  const ts=db.types.filter(x=>GR(x.id)===grp).map(x=>x.id);const t=ts[0]||'book';const TG=[...new Set(ts.flatMap(x=>TAGS[x]||[]))];const [view,setView]=S('full');const [f,setF]=S('');const [q,setQ]=S('');const [mode,setMode]=S('items');const [tg,setTg]=S('');const [ol,setOl]=S(null);const [sk,setSk]=S(()=>localStorage.getItem('rec.sort')||'added');const [rev,setRev]=S(false);const bm=bar==='select';const [bs,setBs]=S({});E(()=>{if(!bm)setBs({})},[bm]);
- const list=db.items.filter(i=>ts.includes(i.type)&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*SORTS[sk][1](a,b));
+ const list=db.items.filter(i=>ts.includes(i.type)&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*(SORTS[sk][1](a,b)||(b.added||0)-(a.added||0)||a.title.localeCompare(b.title,'ko')));
  const pick=id=>bm?setBs(x=>{const n={...x};n[id]?delete n[id]:n[id]=1;return n}):open(id);
  const ids=Object.keys(bs);const bulk=fn=>setDb(d=>({...d,items:d.items.map(i=>bs[i.id]?fn(i):i)}));
  const bStatus=s=>bulk(i=>{const p={status:s};if(s==='playing'&&!i.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=i.finishedAt||today();if(!i.startedAt)p.startedAt=p.finishedAt}return{...i,...p}});
@@ -647,7 +680,7 @@ const Playing=({db,set,open})=>{
 /* ---- 타임라인 ---- */
 const wkz=()=>Math.max(24,Math.round((innerWidth-40)/7));
 const Timeline=({db,set,open,bar})=>{
- const [q,setQ]=S('');const mq=i=>!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase());
+ const bref=R(null);const [q,setQ]=S('');const mq=i=>!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase());
  const [v,setV]=S('list');const [t,setT]=S('');const [f,setF]=S('');const [ym,setYm]=S(today().slice(0,7));const [day,setDay]=S(today());const [zm,setZm]=S(wkz);const pin=R();
  const items=db.items.filter(i=>dateOf(i)&&(!t||i.type===t)&&(!f||i.status===f)&&mq(i));
  const by={};items.forEach(i=>(by[dateOf(i)]=by[dateOf(i)]||[]).push(i));
@@ -669,22 +702,23 @@ const Timeline=({db,set,open,bar})=>{
    {l.length?<div className="fade grid grid-cols-3 gap-3">{l.map(i=><Mini key={i.id} it={i} open={open} sub/>)}</div>:<Empty t="이 날의 기록이 없어요"/>}</div>}
  else{const PX=zm;const rows=db.items.filter(i=>(i.startedAt||i.finishedAt)&&(!t||i.type===t)&&(!f||i.status===f)&&mq(i)).map(i=>({i,s:i.startedAt||i.finishedAt,e:i.finishedAt||(i.status==='playing'?today():i.startedAt||i.finishedAt)})).sort((a,b)=>a.s<b.s?-1:1);
   if(!rows.length)body=<Empty t="날짜가 있는 기록이 없어요"/>;else{
-  const t0=rows[0].s.slice(0,7)+'-01';const end=rows.reduce((m,r)=>r.e>m?r.e:m,t0);const nd=dd(end,t0)+30;const W=nd*PX+40;
+  const td=today();const t0=(rows[0].s<td?rows[0].s:td).slice(0,7)+'-01';const end=rows.reduce((m,r)=>r.e>m?r.e:m,td);const nd=dd(end,t0)+30;const W=nd*PX+40;const tx=dd(td,t0)*PX;const goToday=()=>bref.current&&bref.current.scrollTo({left:tx-bref.current.clientWidth/2,behavior:'smooth'});
   const lvl=PX>=24?0:PX>=6?1:2;const marks=[];
   for(let k=0;k<nd;k++){const d=addDay(t0,k);const dt=new Date(d+'T00:00:00');const dn=dt.getDate(),dw=dt.getDay();let m=null;
    if(dn===1)m={c:2,l:d.slice(0,7).replace('-','.')};else if(lvl<2&&dw===1)m={c:1,l:`${dt.getMonth()+1}/${dn}`};else if(lvl===0)m={c:0,l:PX>=40?`${dn}일 ${WD[dw]}`:`${dn}`};
    if(m)marks.push({...m,x:k*PX,k:d})}
   const lanes=[];const pl=rows.map(r=>{const x=dd(r.s,t0)*PX;const bw=Math.max((dd(r.e,r.s)+1)*PX,6);const w=Math.max(bw,104);let k=lanes.findIndex(e=>e<=x);if(k<0){k=lanes.length;lanes.push(0)}lanes[k]=x+w+4;return{...r,x,bw,w,k}});
-  const cz=z=>Math.min(160,Math.max(1,+z.toFixed(2)));const zoom=n=>setZm(z=>cz(z*n));
+  const cz=z=>Math.min(160,Math.max(1,+z.toFixed(2)));
   const dist=e=>Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
   body=<><div className="flex items-center gap-2 mb-2"><span className="text-xs text-mu">단위</span>{[['일',wkz()],['주',12],['월',3]].map(([l,z],n)=><Chip key={l} on={lvl===n} onClick={()=>setZm(z)}>{l}</Chip>)}</div>
-   <div className="overflow-x-auto" ref={el=>{if(el&&!el.dataset.s&&el.scrollWidth>el.clientWidth){el.dataset.s='1';el.scrollLeft=el.scrollWidth}}}><div className="relative" style={{width:W,height:26+lanes.length*50,touchAction:'pan-x pan-y'}}
+   <div className="overflow-x-auto" ref={el=>{bref.current=el;if(el&&!el.dataset.s&&el.scrollWidth>el.clientWidth){el.dataset.s='1';el.scrollLeft=tx-el.clientWidth/2}}}><div className="relative" style={{width:W,height:26+lanes.length*50,touchAction:'pan-x pan-y'}}
     onTouchStart={e=>{if(e.touches.length===2)pin.current={d:dist(e),z:zm}}} onTouchMove={e=>{if(e.touches.length===2&&pin.current)setZm(cz(pin.current.z*dist(e)/pin.current.d))}} onTouchEnd={()=>{pin.current=null}}>
+    <div className="absolute top-0 bottom-0 w-0.5 bg-ac opacity-70 pointer-events-none" style={{left:tx}}><span className="absolute bottom-0 left-1 text-[10px] font-medium text-ac bg-bg px-0.5 rounded">오늘</span></div>
     {marks.map(m=><div key={m.k} className={'absolute top-0 bottom-0 border-l text-[10px] pl-1 pt-1 leading-none whitespace-nowrap '+(m.c===2?'border-mu text-tx font-medium':m.c===1?'border-bd text-mu':'border-bd text-mu opacity-70')} style={{left:m.x}}>{m.l}</div>)}
     {pl.map(r=><button key={r.i.id} onClick={()=>open(r.i.id)} className="absolute text-left rounded-md px-1 pt-1 overflow-hidden" style={{...tbg(r.i.type,r.i.status),left:r.x,top:24+r.k*50,width:r.w,height:46}}>
      <span className="block h-1.5 rounded-full bg-ac" style={{width:r.bw,opacity:r.i.status==='done'?1:.5}}/>
      <span className="text-xs leading-tight block mt-0.5" style={{display:'-webkit-box',WebkitBoxOrient:'vertical',WebkitLineClamp:2,overflow:'hidden'}}>{r.i.title}</span></button>)}</div></div>
-   <div className="fixed right-4 bottom-20 z-20 flex flex-col gap-2">{[['plus',1.5,'확대'],['minus',1/1.5,'축소']].map(([n,z,l])=><button key={n} aria-label={l} onClick={()=>zoom(z)} className="w-10 h-10 rounded-full bg-bg border border-bd text-tx flex items-center justify-center"><Ic n={n}/></button>)}</div></>}}
+   <button onClick={goToday} aria-label="오늘로 가기" className="fixed right-4 z-20 w-11 h-11 rounded-full border border-bd text-tx flex items-center justify-center" style={{bottom:'calc(56px + env(safe-area-inset-bottom))',background:'color-mix(in srgb, var(--bg) 55%, transparent)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}><Ic n="aim" s={20}/></button></>}}
  return <div>
   <div className="sticky bg-bg z-10 pt-2 pb-1.5 border-b border-bd space-y-1.5" style={{top:'calc(48px + env(safe-area-inset-top, 0px))'}}>
    <Rows>{V.map(([k,l])=><Chip key={k} on={v===k} onClick={()=>setV(k)}>{l}</Chip>)}</Rows>
