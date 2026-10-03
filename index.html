@@ -89,7 +89,9 @@ PROV.tmdbtv={l:'TMDB',t:['drama'],key:'tmdb',async search(q,c){
  const u=`https://api.themoviedb.org/3/search/tv?api_key=${c.tmdb}&language=ko-KR&query=${encodeURIComponent(q)}`;
  const r=await(await fetch(px(c,u))).json();
  return(r.results||[]).slice(0,15).map(d=>({title:d.name,creator:'',year:(d.first_air_date||'').slice(0,4),tags:gt(d.genre_ids),cover:d.poster_path?'https://image.tmdb.org/t/p/w342'+d.poster_path:'',extId:String(d.id),source:'tmdbtv'}))}};
-PROV.gbooks={l:'Google Books',t:['book'],async search(q,c){
+/* 구글북스는 나중에 쓰려고 숨겨둠. 다시 켜려면 아래 SHOW_GBOOKS를 true로 */
+const SHOW_GBOOKS=false;
+PROV.gbooks={hidden:!SHOW_GBOOKS,l:'Google Books',t:['book'],async search(q,c){
  const u=`https://www.googleapis.com/books/v1/volumes?printType=books&maxResults=15&q=${encodeURIComponent(q)}${c.gbooks?'&key='+c.gbooks:''}${c.glang?'&langRestrict='+c.glang:''}`;
  const r=await(await fetch(px(c,u))).json();
  if(r.error)throw new Error(r.error.message||'Google Books 오류');
@@ -437,8 +439,8 @@ const MetaEd=({it,upd})=>{const m=it.meta||{};const [o,setO]=S(false);const ks=O
    {m[k].length>50||/\n/.test(m[k])?<textarea rows="3" value={m[k]} onChange={e=>set(k,e.target.value)}/>:<input value={m[k]} onChange={e=>set(k,e.target.value)}/>}</label>)}
    <button onClick={()=>{const k=prompt('항목 이름');if(k&&!(k in m))set(k,'')}} className="text-sm text-ac">+ 항목 추가</button></div>}</div>};
 const Refresh=({it,upd,close})=>{const {cfg}=React.useContext(QC);
- const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(it.type));
- const [pv,setPv]=S(PROV[it.source]&&PROV[it.source].t.includes(it.type)?it.source:provs[0]?.[0]);const [q,setQ]=S(it.title);
+ const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(it.type)&&!p.hidden);
+ const [pv,setPv]=S(PROV[it.source]&&!PROV[it.source].hidden&&PROV[it.source].t.includes(it.type)?it.source:provs[0]?.[0]);const [q,setQ]=S(it.title);
  const [res,setRes]=S([]);const [busy,setBusy]=S(false);const [err,setErr]=S('');const [o,setO]=S({title:true,cover:true,tags:true});
  const go=async()=>{const p=PROV[pv];if(!p||!q.trim())return;setErr('');if(p.key&&!cfg[p.key]){setErr('설정에서 '+p.l+' API 키를 입력하세요.');return}
   setBusy(true);try{const x=await p.search(q,cfg);setRes(x);if(!x.length)setErr('검색 결과가 없어요')}catch(e){setErr('검색 실패: '+(e.message||''));setRes([])}setBusy(false)};
@@ -484,7 +486,7 @@ const Detail=({it,set,upd,del,close})=><Modal onClose={close} style={tbg(it.type
 
 /* ---- 추가 ---- */
 const Add=({type,types,cfg,add,close,onType})=>{
- const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(type));
+ const provs=Object.entries(PROV).filter(([,p])=>p.t.includes(type)&&!p.hidden);
  const [tab,setTab]=S(provs.length?'s':'m');const [pv,setPv]=S(provs[0]?.[0]);const [q,setQ]=S('');
  const [res,setRes]=S([]);const [lang,setLang]=S(()=>localStorage.getItem('rec.glang')||'');const [busy,setBusy]=S(false);const [err,setErr]=S('');const [st,setSt]=S('planned');const [done,setDone]=S({});
  const [m,setM]=S({title:'',creator:'',year:'',cover:''});
@@ -633,7 +635,7 @@ const StatsView=({db,t,cfg})=>{
 const SORTS={added:['추가한 순',(a,b)=>(b.added||0)-(a.added||0)],date:['감상일 순',(a,b)=>dateOf(b).localeCompare(dateOf(a))],title:['제목 순',(a,b)=>a.title.localeCompare(b.title,'ko')],year:['연도 순',(a,b)=>(+b.year||0)-(+a.year||0)],rating:['별점 순',(a,b)=>(b.rating||0)-(a.rating||0)],creator:['지은이 순',(a,b)=>(a.creator||'힣').localeCompare(b.creator||'힣','ko')]};
 const Library=({db,cfg,set,open,setDb,grp,bar})=>{
  const ts=db.types.filter(x=>GR(x.id)===grp).map(x=>x.id);const t=ts[0]||'book';const TG=[...new Set(ts.flatMap(x=>TAGS[x]||[]))];const [view,setView]=S('full');const [f,setF]=S('');const [q,setQ]=S('');const [mode,setMode]=S('items');const [tg,setTg]=S('');const [ol,setOl]=S(null);const [sk,setSk]=S(()=>localStorage.getItem('rec.sort')||'added');const [rev,setRev]=S(false);const bm=bar==='select';const [bs,setBs]=S({});E(()=>{if(!bm)setBs({})},[bm]);
- const list=db.items.filter(i=>ts.includes(i.type)&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*(SORTS[sk][1](a,b)||(b.added||0)-(a.added||0)||a.title.localeCompare(b.title,'ko')));
+ const list=db.items.filter(i=>ts.includes(i.type)&&(!f||i.status===f)&&(!tg||(i.tags||[]).includes(tg))&&(!q||(i.title+(i.sub||'')+(i.creator||'')).toLowerCase().includes(q.toLowerCase()))).sort((a,b)=>(rev?-1:1)*SORTS[sk][1](a,b)||(b.added||0)-(a.added||0));
  const pick=id=>bm?setBs(x=>{const n={...x};n[id]?delete n[id]:n[id]=1;return n}):open(id);
  const ids=Object.keys(bs);const bulk=fn=>setDb(d=>({...d,items:d.items.map(i=>bs[i.id]?fn(i):i)}));
  const bStatus=s=>bulk(i=>{const p={status:s};if(s==='playing'&&!i.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=i.finishedAt||today();if(!i.startedAt)p.startedAt=p.finishedAt}return{...i,...p}});
@@ -760,7 +762,7 @@ const Settings=({db,setDb,cfg,setCfg})=>{
   <Sec t="글자 크기"><div className="flex gap-2 flex-wrap">{[[14,'작게'],[16,'보통'],[18,'크게'],[20,'아주 크게']].map(([z,l])=><Chip key={z} on={(cfg.fsize||16)===z} onClick={()=>setCfg({...cfg,fsize:z})}>{l}</Chip>)}</div></Sec>
   <Sec t="검색 API"><input placeholder="국립중앙도서관 cert_key" value={cfg.nlk} onChange={e=>setCfg({...cfg,nlk:e.target.value})}/>
    <input placeholder="TMDB API 키 (v3)" value={cfg.tmdb} onChange={e=>setCfg({...cfg,tmdb:e.target.value})}/>
-   <input placeholder="Google Books API 키 (선택, 호출량 많을 때)" value={cfg.gbooks||''} onChange={e=>setCfg({...cfg,gbooks:e.target.value})}/>
+   {SHOW_GBOOKS&&<input placeholder="Google Books API 키 (선택, 호출량 많을 때)" value={cfg.gbooks||''} onChange={e=>setCfg({...cfg,gbooks:e.target.value})}/>}
    <input placeholder="CORS 프록시 주소 (선택, 예: https://proxy.example/?url=)" value={cfg.proxy} onChange={e=>setCfg({...cfg,proxy:e.target.value})}/></Sec>
   <Sec t="내보내기 (범위 선택)"><Sel v={[et,setEt]} s={[es,setEs]}/>
    <div className="grid grid-cols-2 gap-2 text-xs text-mu"><label>기간 시작<input type="date" value={ef} onChange={e=>setEf(e.target.value)}/></label><label>기간 끝<input type="date" value={eu} onChange={e=>setEu(e.target.value)}/></label></div>
