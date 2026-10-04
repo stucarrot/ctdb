@@ -194,7 +194,9 @@ const parseCSV=t=>{t=t.replace(/^\ufeff/,'');const rows=[];let r=[],v='',q=false
 const fromRows=(rows,types)=>rows.map(o=>{
  if('Letterboxd URI' in o)return{id:uid(),type:'movie',title:o.Name,creator:'',year:o.Year,status:'done',rating:o.Rating?+o.Rating:0,startedAt:'',finishedAt:o.Date||o['Watched Date']||'',note:'',cover:'',source:'letterboxd',extId:o['Letterboxd URI']};
  return{...o,id:o.id||uid(),type:o.type||types[0].id,status:o.status||'planned',rating:+o.rating||0,tags:pj(o.tags),notes:pj(o.notes),meta:pjo(o.meta),read:+o.read||0,review:o.review||'',rel:pj(o.rel),prog:pjo(o.prog),urls:pj(o.urls)}}).filter(i=>i.title);
-const dl=(name,txt,mime)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;a.click()};
+/* 안드로이드 앱(WebView 래퍼, /android 참고)에서는 window.AndroidApp 브릿지로 저장·공유·복사 */
+const blobB64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(String(f.result).split(',')[1]);f.readAsDataURL(b)});
+const dl=async(name,txt,mime)=>{if(window.AndroidApp){window.AndroidApp.save(name,mime,await blobB64(new Blob([txt],{type:mime})));return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;a.click()};
 
 /* ---- 공통 UI ---- */
 const Cover=({it,c=''})=>{const [st,setSt]=S(0);E(()=>setSt(0),[it.cover]);
@@ -357,7 +359,7 @@ const Composer=({type,init,onSave,ph='메모 남기기'})=>{
 /* ---- 메모 채팅 (플랫 타임라인 + 답글 참조 + 타래 보기) ---- */
 const Memos=({it,upd,full})=>{
  const {cfg}=React.useContext(QC);
- const noteImg=async(n,m)=>{if(m==='copy'){try{await navigator.clipboard.write([new ClipboardItem({'image/png':drawNote(it,n,cfg).then(c=>new Promise(r=>c.toBlob(r)))})]);alert('이미지를 복사했어요')}catch(e){alert('이 환경은 이미지 복사를 지원하지 않아요. 공유·저장을 이용하세요')}}else await shareCv(await drawNote(it,n,cfg),'메모.png')};
+ const noteImg=async(n,m)=>{if(m==='copy'){if(window.AndroidApp){const c=await drawNote(it,n,cfg);window.AndroidApp.copyImage('메모.png',await blobB64(await new Promise(r=>c.toBlob(r))));return}try{await navigator.clipboard.write([new ClipboardItem({'image/png':drawNote(it,n,cfg).then(c=>new Promise(r=>c.toBlob(r)))})]);alert('이미지를 복사했어요')}catch(e){alert('이 환경은 이미지 복사를 지원하지 않아요. 공유·저장을 이용하세요')}}else await shareCv(await drawNote(it,n,cfg),'메모.png')};
  const notes=(it.notes||(it.note?[{id:'n0',t:it.added||Date.now(),text:it.note}]:[])).slice().sort((a,b)=>a.t-b.t);
  const [mode,setMode]=S(null);const [th,setTh]=S(null);const [ex,setEx]=S({});const [sel,setSel]=S(null);
  const save=ns=>upd(it.id,{notes:ns,note:''});
@@ -542,7 +544,7 @@ const IMGC=new Map();
 const loadImg=async(it,cfg)=>{const u=[it.cover,it.type==='book'&&/^\d{10,13}$/.test(it.extId||'')?`https://covers.openlibrary.org/b/isbn/${it.extId}-M.jpg?default=false`:''].filter(Boolean);const key=u.join('|');if(IMGC.has(key))return IMGC.get(key);
  for(const x of u)for(const y of [x,...(cfg.proxy?[cfg.proxy+encodeURIComponent(x)]:[]),'https://images.weserv.nl/?w=500&output=jpg&url='+encodeURIComponent(x)]){try{const r=await fetch(y,{referrerPolicy:'no-referrer'});if(!r.ok)continue;const b=await createImageBitmap(await r.blob());IMGC.set(key,b);return b}catch(e){}}return null};
 const newCv=()=>{const c=document.createElement('canvas');c.width=1080;c.height=1920;const g=c.getContext('2d');const C=tcol();g.fillStyle=C.bg;g.fillRect(0,0,1080,1920);g.textBaseline='alphabetic';return[c,g,C]};
-const shareCv=(c,name)=>new Promise(res=>c.toBlob(async b=>{const f=new File([b],name,{type:'image/png'});
+const shareCv=(c,name)=>new Promise(res=>c.toBlob(async b=>{if(window.AndroidApp){window.AndroidApp.share(name,'image/png',await blobB64(b));res();return}const f=new File([b],name,{type:'image/png'});
  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});res();return}catch(e){if(e.name==='AbortError'){res();return}}}
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();res()}));
 const bars=(g,C,rows,x,y,w,lw=230)=>{const mx=Math.max(1,...rows.map(r=>r[1]));rows.forEach(([k,v],n)=>{const yy=y+n*54;g.fillStyle=C.mu;g.font=fnt(300,28);g.textAlign='left';
@@ -733,13 +735,22 @@ const Timeline=({db,set,open,bar})=>{
 const ACC=['#859900','#6c8f7e','#b58900','#2aa198','#268bd2','#a89f8a','#cb4b16','#d33682','#6c71c4'];
 const Settings=({db,setDb,cfg,setCfg})=>{
  const [et,setEt]=S('');const [es,setEs]=S('');const [pend,setPend]=S(null);const [it,setIt]=S('');const [is,setIs]=S('');const [nt,setNt]=S('');const [xd,setXd]=S(xdark());const [ist,setIst]=S('');const [prog,setProg]=S(null);const [ef,setEf]=S('');const [eu,setEu]=S('');const [rm,setRm]=S(true);const [rr,setRr]=S(true);const [ir1,setIr1]=S('');const [ir2,setIr2]=S('');
+ const fullBackup=()=>{const ls={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('rec.'))ls[k]=localStorage.getItem(k)}
+  ls['rec.db']=JSON.stringify(db);ls['rec.cfg']=JSON.stringify(cfg);const d=new Date(),p=n=>String(n).padStart(2,'0');
+  dl(`기록앱-전체백업-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`,JSON.stringify({app:'rec-backup',v:1,at:d.toISOString(),ls}),'application/json')};
+ const fullRestore=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const j=JSON.parse(await f.text());const ls=j&&j.app==='rec-backup'&&j.ls;if(!ls||typeof ls!=='object')throw 0;const d=JSON.parse(ls['rec.db']||'null');if(!d||!Array.isArray(d.items))throw 0;
+   if(!confirm(`백업 파일(작품 ${d.items.length}개, 목록 ${(d.lists||[]).length}개)로 이 기기의 모든 데이터와 설정을 교체할까요?\n되돌릴 수 없어요.`))return;
+   Object.keys(localStorage).filter(k=>k.startsWith('rec.')).forEach(k=>localStorage.removeItem(k));
+   Object.entries(ls).forEach(([k,v])=>{if(k.startsWith('rec.')&&typeof v==='string')localStorage.setItem(k,v)});location.reload()}
+  catch(err){alert('올바른 전체 백업 파일이 아니에요')}};
  const inR=i=>{if(!ef&&!eu)return true;const d=dateOf(i);return !!d&&(!ef||d>=ef)&&(!eu||d<=eu)};
  const pick=(t,s)=>db.items.filter(i=>(!t||i.type===t)&&(!s||i.status===s)&&inR(i));
  const fl=()=>pend.filter(i=>(!it||i.type===it)&&(!is||i.status===is)).slice(Math.max(0,(+ir1||1)-1),+ir2||undefined);
  const Sel=({v,s})=><div className="flex gap-2"><select value={v[0]} onChange={e=>v[1](e.target.value)}><option value="">모든 종류</option>{db.types.map(x=><option key={x.id} value={x.id}>{x.l}</option>)}</select>
   <select value={s[0]} onChange={e=>s[1](e.target.value)}><option value="">모든 상태</option>{ST.map(x=><option key={x.k} value={x.k}>{x.l}</option>)}</select></div>;
  const Sec=({t,children})=><section className="py-5 border-b border-bd space-y-3"><h2 className="text-sm text-mu">{t}</h2>{children}</section>;
- const file=async e=>{const f=e.target.files[0];if(!f)return;const tx=await f.text();try{if(/\.ris$/i.test(f.name)||/^TY  - /m.test(tx.slice(0,3000))){const L=parseRIS(tx,db.types);if(!L.length)throw 0;setPend(L)}else{const rows=f.name.endsWith('.json')?(JSON.parse(tx).items||JSON.parse(tx)):parseCSV(tx);setPend(fromRows(rows,db.types))}}catch(x){alert('파일을 읽을 수 없어요')}e.target.value=''};
+ const file=async e=>{const f=e.target.files[0];if(!f)return;const tx=await f.text();try{if(/\.ris$/i.test(f.name)||/^TY  - /m.test(tx.slice(0,3000))){const L=parseRIS(tx,db.types);if(!L.length)throw 0;setPend(L)}else{if(/"app"\s*:\s*"rec-backup"/.test(tx.slice(0,200))){alert('이 파일은 전체 백업 파일이에요. 위의 "전체 복원"을 이용하세요');return}const rows=f.name.endsWith('.json')?(JSON.parse(tx).items||JSON.parse(tx)):parseCSV(tx);setPend(fromRows(rows,db.types))}}catch(x){alert('파일을 읽을 수 없어요')}e.target.value=''};
  const doImport=async()=>{let L=fl().map(i=>ist?{...i,status:ist,...(ist==='done'?{finishedAt:i.finishedAt||today()}:{})}:i);
   if(L.some(i=>i.source==='letterboxd')){if(!cfg.tmdb){alert('Letterboxd는 TMDB로 조회해 가져와요. 위 검색 API에 TMDB 키를 먼저 입력하세요.');return}
    setProg({n:0,t:L.length});const out=[...L];
@@ -764,6 +775,10 @@ const Settings=({db,setDb,cfg,setCfg})=>{
    <input placeholder="TMDB API 키 (v3)" value={cfg.tmdb} onChange={e=>setCfg({...cfg,tmdb:e.target.value})}/>
    {SHOW_GBOOKS&&<input placeholder="Google Books API 키 (선택, 호출량 많을 때)" value={cfg.gbooks||''} onChange={e=>setCfg({...cfg,gbooks:e.target.value})}/>}
    <input placeholder="CORS 프록시 주소 (선택, 예: https://proxy.example/?url=)" value={cfg.proxy} onChange={e=>setCfg({...cfg,proxy:e.target.value})}/></Sec>
+  <Sec t="전체 백업 · 복원 (앱·기기 이전용)">
+   <p className="text-xs text-mu">작품·메모·목록·종류·대기열 등 모든 기록과 설정(테마·글자색·API 키 포함)을 한 파일에 있는 그대로 저장하고, 그대로 복원해요. TMDB 조회 같은 보정 없이 값이 똑같이 옮겨져요. 파일에 API 키가 들어 있으니 남에게 공유하지 마세요.</p>
+   <button onClick={fullBackup} className="w-full py-2 rounded-lg border border-bd flex items-center justify-center gap-2"><Ic n="dl" s={16}/>전체 백업 파일 저장</button>
+   <label className="py-2 rounded-lg border border-bd flex items-center justify-center gap-2 cursor-pointer"><Ic n="ul" s={16}/>전체 복원 (백업 파일 선택)<input type="file" accept=".json" onChange={fullRestore} className="hidden"/></label></Sec>
   <Sec t="내보내기 (범위 선택)"><Sel v={[et,setEt]} s={[es,setEs]}/>
    <div className="grid grid-cols-2 gap-2 text-xs text-mu"><label>기간 시작<input type="date" value={ef} onChange={e=>setEf(e.target.value)}/></label><label>기간 끝<input type="date" value={eu} onChange={e=>setEu(e.target.value)}/></label></div>
    <p className="text-xs text-mu">기간은 완료일(없으면 시작일) 기준이고, 비우면 전체예요. 아래 모든 형식에 적용돼요.</p><p className="text-sm text-mu">{pick(et,es).length}개 선택됨</p>
@@ -790,10 +805,11 @@ function App(){
  const go=k=>{sc.current[pt.current]=window.scrollY;pt.current=k;if(k!=='tl'&&k!=='set')lg.current=k;setTab(k)};
  React.useLayoutEffect(()=>{window.scrollTo(0,sc.current[tab]||0)},[tab]);
  const [top,setTop]=S(false);E(()=>{const f=()=>setTop(scrollY>600);f();addEventListener('scroll',f,{passive:true});return()=>removeEventListener('scroll',f)},[]);
+ E(()=>{window.__back=()=>{if(dr)setDr(null);else if(adding)setAdding(false);else if(np)setNp(null);else if(sel)setSel(null);else return false;return true}});
  const V=k=>({display:tab===k?'block':'none'});const [sel,setSel]=S(null);const [np,setNp]=S(null);const [dr,setDr]=S(null);const [bar,setBar]=S('');const [adding,setAdding]=S(false);const [addT,setAddT]=S('');
  E(()=>{localStorage.setItem('rec.db',JSON.stringify(db))},[db]);
  E(()=>{localStorage.setItem('rec.cfg',JSON.stringify(cfg));const r=document.documentElement;
-  const mq=matchMedia('(prefers-color-scheme: dark)');const ap=()=>{r.dataset.t=cfg.theme==='auto'?(mq.matches?'dark':'light'):cfg.theme;r.style.setProperty('--ac',cfg.accent);cfg.tx?r.style.setProperty('--tx',cfg.tx):r.style.removeProperty('--tx');r.style.fontSize=(cfg.fsize||16)+'px';r.style.setProperty('--fw',cfg.fw||300)};ap();mq.addEventListener('change',ap);return()=>mq.removeEventListener('change',ap)},[cfg]);
+  const mq=matchMedia('(prefers-color-scheme: dark)');const bars=()=>{if(!(window.AndroidApp&&window.AndroidApp.setBars))return;const c=(getComputedStyle(document.body).backgroundColor.match(/\d+/g)||[253,246,227]).map(Number);window.AndroidApp.setBars('#'+c.slice(0,3).map(x=>x.toString(16).padStart(2,'0')).join(''),(.299*c[0]+.587*c[1]+.114*c[2])<128)};const ap=()=>{r.dataset.t=cfg.theme==='auto'?(mq.matches?'dark':'light'):cfg.theme;r.style.setProperty('--ac',cfg.accent);cfg.tx?r.style.setProperty('--tx',cfg.tx):r.style.removeProperty('--tx');r.style.fontSize=(cfg.fsize||16)+'px';r.style.setProperty('--fw',cfg.fw||300);bars()};ap();mq.addEventListener('change',ap);return()=>mq.removeEventListener('change',ap)},[cfg]);
  const upd=(id,p)=>setDb(d=>({...d,items:d.items.map(i=>i.id===id?{...i,...p}:i)}));
  const set=(it,s)=>{const p={status:s};if(s==='playing'&&!it.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=it.finishedAt||today();if(!it.startedAt)p.startedAt=p.finishedAt}upd(it.id,p)};
  const add=o=>setDb(d=>({...d,items:[{rating:0,startedAt:'',finishedAt:'',note:'',...o,id:uid(),added:Date.now()},...d.items]}));
