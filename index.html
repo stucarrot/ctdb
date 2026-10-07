@@ -485,83 +485,147 @@ const Refresh=({it,upd,close})=>{const {cfg}=React.useContext(QC);
   {res.map((r,i)=><button key={i} disabled={busy} onClick={()=>apply(r)} className="w-full flex gap-3 py-2 border-b border-bd items-center text-left"><Cover it={r} c="w-10 shrink-0"/><span className="flex-1 min-w-0"><span className="block truncate">{r.title}</span><span className="block text-xs text-mu truncate">{[r.sub,r.creator,r.year].filter(Boolean).join(' · ')}</span></span></button>)}</>}</Modal>};
 const RefreshBtn=({it,upd})=>{const [o,setO]=S(false);return <><button onClick={()=>setO(true)} className="mt-2 text-sm text-ac">정보 갱신 (다시 검색해 병합)</button>{o&&<Refresh it={it} upd={upd} close={()=>setO(false)}/>}</>};
 /* ---- 상세(full 팝업) ---- */
-/* ---- 갤러리: 이미지는 IndexedDB(rec-img), 메타는 item.gal=[{id,t,text,pos,scan,ocr,nid,v,sz}] ---- */
+/* ---- 갤러리: 이미지는 IndexedDB(rec-img), 메타는 item.gal=[{id,t,text,pos,scan,ocr,nid,v,sz,box,hasO}]. 글자영역 자르기 시 자르기 전 이미지는 key=id+'o'에 보관(박스 재편집용) ---- */
 const IDB=()=>IDB.p||(IDB.p=new Promise((ok,no)=>{const r=indexedDB.open('rec-img',1);r.onupgradeneeded=()=>r.result.createObjectStore('g');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}));
 const gx=async(m,f)=>{const d=await IDB();return new Promise((ok,no)=>{const t=d.transaction('g',m),q=f(t.objectStore('g'));t.oncomplete=()=>ok(q&&q.result);t.onerror=()=>no(t.error)})};
 const gPut=(id,b)=>gx('readwrite',s=>s.put(b,id)),gGet=id=>gx('readonly',s=>s.get(id)),gDel=id=>gx('readwrite',s=>s.delete(id));
+const cv=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const small=(c,m)=>{const k=Math.min(1,m/Math.max(c.width,c.height)),t=cv(Math.max(1,Math.round(c.width*k)),Math.max(1,Math.round(c.height*k)));t.getContext('2d',{willReadFrequently:true}).drawImage(c,0,0,t.width,t.height);return t};
+const loadCv=async b=>{let bm;try{bm=await createImageBitmap(b,{imageOrientation:'from-image'})}catch(e){bm=await createImageBitmap(b)}
+ const k=Math.min(1,Math.sqrt(36e6/(bm.width*bm.height))),c=cv(Math.round(bm.width*k),Math.round(bm.height*k));c.getContext('2d',{willReadFrequently:true}).drawImage(bm,0,0,c.width,c.height);return c};
+/* 문서 스캔 보정(제자리): 명도(형광펜 제거용으로 최대채널 가중) → 어두운 배경이면 반전 → 지역 평균(조명·그림자)으로 나눠 배경을 흰색으로 평탄화 → scan=부드러운 대비 곡선(글자 가장자리 유지), bw=순수 이진화 */
+const flat=(c,mode)=>{const w=c.width,h=c.height,x=c.getContext('2d',{willReadFrequently:true}),im=x.getImageData(0,0,w,h),d=im.data,n=w*h,g=new Uint8Array(n);for(let i=0;i<n;i++){const r=d[4*i],a=d[4*i+1],b=d[4*i+2];g[i]=.4*(.299*r+.587*a+.114*b)+.6*Math.max(r,a,b)}
+ let sm=0,k=0;for(let y=h>>2;y<h*3>>2;y++)for(let j=w>>2;j<w*3>>2;j++){sm+=g[y*w+j];k++}
+ if(k&&sm/k<100)for(let i=0;i<n;i++)g[i]=255-g[i]; /* 중앙부가 어두우면(다크모드 화면 등) 반전 */
+ const W=w+1,I=n*255<4e9?new Uint32Array(W*(h+1)):new Float64Array(W*(h+1));
+ for(let y=0;y<h;y++){let a=0;for(let j=0;j<w;j++){a+=g[y*w+j];I[(y+1)*W+j+1]=I[y*W+j+1]+a}}
+ const r=Math.max(10,Math.round(Math.min(w,h)/24));
+ for(let y=0;y<h;y++){const y0=Math.max(0,y-r),y1=Math.min(h-1,y+r);for(let j=0;j<w;j++){const x0=Math.max(0,j-r),x1=Math.min(w-1,j+r);
+  const m=(I[(y1+1)*W+x1+1]-I[y0*W+x1+1]-I[(y1+1)*W+x0]+I[y0*W+x0])/((x1-x0+1)*(y1-y0+1)),q=g[y*w+j]/(m||1);let v;
+  if(mode==='bw')v=q<.75?0:255;else{const t=Math.min(1,Math.max(0,(q-.6)/.3));v=t*t*(3-2*t)*255}
+  const o=4*(y*w+j);d[o]=d[o+1]=d[o+2]=v}}
+ x.putImageData(im,0,0)};
+/* 글자 위치 분석: 480px로 줄여 평탄화 → 잉크 칸 → 3x3 팽창 → 가장자리와 이어진 덩어리(그림자·책상·테두리) 제외 */
+const core=(c,done)=>{const t=small(c,480);if(!done)flat(t,'scan');const w=t.width,h=t.height,d=t.getContext('2d').getImageData(0,0,w,h).data,ink=new Uint8Array(w*h),m=new Uint8Array(w*h);
+ for(let i=0;i<w*h;i++)ink[i]=d[4*i]<215?1:0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x])for(let a=-1;a<2;a++)for(let b=-1;b<2;b++){const yy=y+a,xx=x+b;if(yy>=0&&yy<h&&xx>=0&&xx<w)m[yy*w+xx]=1}
+ const bd=new Uint8Array(w*h),st=[],pu=i=>{if(m[i]&&!bd[i]){bd[i]=1;st.push(i)}};
+ for(let x=0;x<w;x++){pu(x);pu((h-1)*w+x)}for(let y=0;y<h;y++){pu(y*w);pu(y*w+w-1)}
+ while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;x>0&&pu(i-1);x<w-1&&pu(i+1);y>0&&pu(i-w);y<h-1&&pu(i+w)}
+ const lab=new Int32Array(w*h),C=[];
+ for(let s=0;s<w*h;s++){if(!m[s]||bd[s]||lab[s])continue;const id=C.length+1,c={x0:w,x1:0,y0:h,y1:0,n:0};C.push(c);lab[s]=id;st.push(s);
+  while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;if(ink[i]){c.n++;if(x<c.x0)c.x0=x;if(x>c.x1)c.x1=x;if(y<c.y0)c.y0=y;if(y>c.y1)c.y1=y}
+   const q=j=>{if(m[j]&&!bd[j]&&!lab[j]){lab[j]=id;st.push(j)}};x>0&&q(i-1);x<w-1&&q(i+1);y>0&&q(i-w);y<h-1&&q(i+w)}}
+ /* 다른 덩어리를 안에 품은 얇은 테두리(책 가장자리·표 선)와 점 노이즈는 글자로 보지 않음 */
+ const bad=C.map(a=>{const bw=a.x1-a.x0,bh=a.y1-a.y0;return a.n<3||(a.n/(2*(bw+bh)+1)<.08*Math.min(bw,bh)&&C.some(b=>b!==a&&b.n>=3&&b.x0>a.x0+2&&b.x1<a.x1-2&&b.y0>a.y0+2&&b.y1<a.y1-2))});
+ const keep=new Uint8Array(w*h);for(let i=0;i<w*h;i++)keep[i]=ink[i]&&lab[i]&&!bad[lab[i]-1]?1:0;
+ return{w,h,ink:keep,all:ink}};
+const textBox=(c,done)=>{const{w,h,ink,all}=core(c,done);const pick=A=>{const X=new Float64Array(w),Y=new Float64Array(h);let n=0;for(let i=0;i<w*h;i++)if(A[i]){X[i%w]++;Y[(i/w)|0]++;n++}return{X,Y,n}};
+ let p=pick(ink);if(p.n<30)p=pick(all);if(p.n<30)return null;
+ const rg=(A,L)=>{let a=0,lo=0,hi=L-1;while(lo<L&&a+A[lo]<p.n*.003)a+=A[lo++];a=0;while(hi>0&&a+A[hi]<p.n*.003)a+=A[hi--];return[lo/L,(hi+1)/L]};
+ const[x0,x1]=rg(p.X,w),[y0,y1]=rg(p.Y,h),px=.03,b=[Math.max(0,x0-px),Math.max(0,y0-px),Math.min(1,x1+px),Math.min(1,y1+px)];
+ return(b[2]-b[0])*(b[3]-b[1])>.94||b[2]-b[0]<.08||b[3]-b[1]<.03?null:b};
+/* 기울기 추정: 글자 줄 투영 히스토그램이 가장 뾰족해지는 각도(-10~10°) */
+const skew=c=>{const{w,h,ink}=core(c,false),P=[];for(let i=0;i<w*h;i++)if(ink[i])P.push(i%w,(i/w)|0);if(P.length<400)return 0;
+ const sc=a=>{const s=Math.sin(a),co=Math.cos(a),off=w*Math.abs(s)+2,H=new Float64Array(h+2*w+8);for(let k=0;k<P.length;k+=2)H[Math.round(P[k+1]*co-P[k]*s+off)]++;let v=0;for(const q of H)v+=q*q;return v};
+ let best=0,bs=-1;for(let a=-10;a<=10;a+=.5){const v=sc(a*Math.PI/180);if(v>bs){bs=v;best=a}}
+ for(let a=best-.5;a<=best+.5;a+=.1){const v=sc(a*Math.PI/180);if(v>bs){bs=v;best=a}}return best};
+const rot=(c,deg)=>{const t=cv(c.width,c.height),x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,t.width,t.height);x.translate(t.width/2,t.height/2);x.rotate(-deg*Math.PI/180);x.drawImage(c,-c.width/2,-c.height/2);return t};
+const cropCv=(c,b)=>{const x=Math.round(b[0]*c.width),y=Math.round(b[1]*c.height),w=Math.max(1,Math.round((b[2]-b[0])*c.width)),h=Math.max(1,Math.round((b[3]-b[1])*c.height)),t=cv(w,h);t.getContext('2d').drawImage(c,x,y,w,h,0,0,w,h);return t};
 const enc=(c,t,q)=>new Promise(r=>c.toBlob(r,t,q));
-/* 축소(+선택: 스캔 보정 = 조명 얼룩 제거 적응형 흑백 이진화) 후 WebP로 저장 → OCR 가능한 최소 용량 */
-const prep=async(blob,scan)=>{let bm;try{bm=await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(e){bm=await createImageBitmap(blob)}
- const k=Math.min(1,(scan?1600:1280)/Math.max(bm.width,bm.height)),w=Math.round(bm.width*k),h=Math.round(bm.height*k);
- const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bm,0,0,w,h);
- if(scan){const im=x.getImageData(0,0,w,h),d=im.data,g=new Float32Array(w*h),W=w+1,I=new Float64Array(W*(h+1));
-  for(let i=0;i<g.length;i++)g[i]=.299*d[4*i]+.587*d[4*i+1]+.114*d[4*i+2];
-  for(let y=0;y<h;y++){let a=0;for(let j=0;j<w;j++){a+=g[y*w+j];I[(y+1)*W+j+1]=I[y*W+j+1]+a}}
-  const r=Math.max(8,w>>5);
-  for(let y=0;y<h;y++){const y0=Math.max(0,y-r),y1=Math.min(h-1,y+r);for(let j=0;j<w;j++){const x0=Math.max(0,j-r),x1=Math.min(w-1,j+r);
-   const n=(x1-x0+1)*(y1-y0+1),sm=I[(y1+1)*W+x1+1]-I[y0*W+x1+1]-I[(y1+1)*W+x0]+I[y0*W+x0];
-   const o=4*(y*w+j);d[o]=d[o+1]=d[o+2]=g[y*w+j]*n<sm*.9?0:255}}
-  x.putImageData(im,0,0)}
- let o=await enc(c,'image/webp',.6);if(o.type!=='image/webp')o=await enc(c,'image/jpeg',.6);return o};
-/* OCR: tesseract.js(CDN, 최초 1회 한·영 학습데이터 내려받음) */
+/* 저장 용량 최소화: WebP 손실/무손실 중 작은 것(보정본), 원본은 손실 .6. 해상도는 줄이지 않음 */
+const encode=async(c,scanned)=>{let a=await enc(c,'image/webp',.6);if(a.type!=='image/webp')a=await enc(c,'image/jpeg',.6);
+ if(scanned&&a.type==='image/webp'){const b=await enc(c,'image/webp',1);if(b&&b.type==='image/webp'&&b.size<a.size)a=b}return a};
+/* 처리 파이프라인: 기울기 → 평탄화/흑백 → (글자영역 자르기). 반환 main=저장본, full=자르기 전(자르지 않았으면 null) */
+const proc=async(src,o)=>{let c=await loadCv(src);const sc=o.mode!=='orig'||o.keep;
+ if(o.desk&&!o.keep){const a=skew(c);if(Math.abs(a)>=.4)c=rot(c,a)}
+ if(o.mode!=='orig'&&!o.keep)flat(c,o.mode);
+ let box=null;if(o.crop)box=o.box||textBox(c,sc);
+ if(!box)return{main:await encode(c,sc),full:null,box:null,sc};
+ return{main:await encode(cropCv(c,box),sc),full:await encode(c,sc),box,sc}};
+/* OCR: tesseract.js(CDN, 최초 1회 한·영 학습데이터 내려받음). 인식 입력만 긴 변 2600px로 줄여 속도 확보(저장본은 그대로) */
 const OCR={};
 const ocr=async(blob,cb)=>{if(!window.Tesseract)await new Promise((ok,no)=>{const e=document.createElement('script');e.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';e.onload=ok;e.onerror=()=>no(new Error('OCR 엔진을 불러오지 못했어요 (인터넷 필요)'));document.head.appendChild(e)});
  if(!OCR.w)OCR.w=await Tesseract.createWorker('kor+eng',1,{logger:m=>OCR.cb&&OCR.cb(m)});OCR.cb=cb;
- const r=await OCR.w.recognize(blob);return r.data.text.replace(/-\n(?=[a-z])/g,'').replace(/[ \t]+\n/g,'\n').replace(/([^\n])\n(?!\n)/g,'$1 ').replace(/\n{3,}/g,'\n\n').trim()};
+ let inp=blob;const bm=await createImageBitmap(blob);if(Math.max(bm.width,bm.height)>2600){const k=2600/Math.max(bm.width,bm.height),t=cv(Math.round(bm.width*k),Math.round(bm.height*k));t.getContext('2d').drawImage(bm,0,0,t.width,t.height);inp=t}
+ const r=await OCR.w.recognize(inp);return r.data.text.replace(/-\n(?=[a-z])/g,'').replace(/[ \t]+\n/g,'\n').replace(/([^\n])\n(?!\n)/g,'$1 ').replace(/\n{3,}/g,'\n\n').trim()};
 const useImg=(id,v)=>{const [u,setU]=S('');E(()=>{let a,x;gGet(id).then(b=>{if(b&&!x){a=URL.createObjectURL(b);setU(a)}});return()=>{x=1;a&&URL.revokeObjectURL(a)}},[id,v]);return u};
 const PF=t=>({book:[['p','쪽'],['pct','%']],movie:[['ts','시:분:초']],drama:[['s','시즌'],['e','화'],['ts','시:분:초']]}[t]||[['ts','시:분:초']]);
-const GThumb=({g,on,sel,pick})=>{const u=useImg(g.id,g.v);
- return <button onClick={pick} className={'relative aspect-square overflow-hidden rounded-lg border bg-sf '+(sel?'border-ac ring-2 ring-ac':'border-bd')}>
-  {u&&<img src={u} alt="" loading="lazy" className="w-full h-full object-cover"/>}
-  <span className="absolute left-1 top-1 flex gap-1 text-[9px]">{g.scan&&<span className="px-1 rounded bg-black/60 text-white">스캔</span>}{g.ocr&&<span className="px-1 rounded bg-black/60 text-white">OCR</span>}</span>
+const MODES=[['scan','스캔 · 선명 (독서용)'],['bw','순수 흑백'],['orig','원본 (압축만)']];
+const GThumb=({g,sel,pick})=>{const u=useImg(g.id,g.v);
+ return <button onClick={pick} className={'relative block w-full mb-2 break-inside-avoid overflow-hidden rounded-lg border bg-sf '+(sel?'border-ac ring-2 ring-ac':'border-bd')}>
+  {u?<img src={u} alt="" loading="lazy" className="w-full block"/>:<div className="h-24"/>}
+  <span className="absolute left-1 top-1 flex gap-1 text-[9px]">{!!g.scan&&<span className="px-1 rounded bg-black/60 text-white">스캔</span>}{!!g.box&&<span className="px-1 rounded bg-black/60 text-white">크롭</span>}{!!g.ocr&&<span className="px-1 rounded bg-black/60 text-white">OCR</span>}</span>
   {(posStr(g.pos)||g.text)&&<span className="absolute inset-x-0 bottom-0 px-1 py-0.5 text-[10px] text-left truncate bg-black/60 text-white">{posStr(g.pos)||snip(g.text)}</span>}
   {sel&&<span className="absolute right-1 top-1 w-5 h-5 rounded-full bg-ac text-bg flex items-center justify-center"><Ic n="check" s={12}/></span>}</button>};
-const GViewer=({it,list,i,setI,close,upd,run,busy})=>{const g=list[i];const u=useImg(g.id,g.v);const up=p=>upd(it.id,x=>({gal:x.gal.map(a=>a.id===g.id?{...a,...p}:a)}));
- const del=async()=>{if(!confirm('이 이미지를 삭제할까요?'))return;await gDel(g.id);upd(it.id,x=>({gal:x.gal.filter(a=>a.id!==g.id)}));list.length>1?setI(Math.max(0,i-1)):close()};
+/* 글자 박스 수동 편집: 자르기 전 이미지 위에서 박스를 끌어 이동, 모서리·변을 끌어 크기 조절 */
+const CropEd=({g,close,done})=>{const u=useImg(g.id+(g.hasO?'o':''),g.v);const [b,setB]=S(g.box||[.05,.05,.95,.95]);const ref=R(),dr=R(null);
+ const dn=(k,e)=>{e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);dr.current={k,x:e.clientX,y:e.clientY,b:[...b]}};
+ const mv=e=>{const d=dr.current;if(!d)return;const r=ref.current.getBoundingClientRect(),dx=(e.clientX-d.x)/r.width,dy=(e.clientY-d.y)/r.height,n=[...d.b],k=d.k,mn=.03;
+  if(k==='m'){const w=n[2]-n[0],h=n[3]-n[1];n[0]=Math.min(1-w,Math.max(0,n[0]+dx));n[1]=Math.min(1-h,Math.max(0,n[1]+dy));n[2]=n[0]+w;n[3]=n[1]+h}
+  else{if(k.includes('l'))n[0]=Math.min(n[2]-mn,Math.max(0,n[0]+dx));if(k.includes('r'))n[2]=Math.max(n[0]+mn,Math.min(1,n[2]+dx));if(k.includes('t'))n[1]=Math.min(n[3]-mn,Math.max(0,n[1]+dy));if(k.includes('b'))n[3]=Math.max(n[1]+mn,Math.min(1,n[3]+dy))}setB(n)};
+ const H=(k,st)=><span onPointerDown={e=>dn(k,e)} className="absolute w-7 h-7 -m-3.5 flex items-center justify-center" style={{touchAction:'none',...st}}><span className="w-3.5 h-3.5 rounded-full bg-ac border-2 border-white"/></span>;
+ return <div><div className="relative inline-block max-w-full select-none" ref={ref} onPointerMove={mv} onPointerUp={()=>dr.current=null}>
+  {u&&<img src={u} alt="" className="max-w-full block" draggable="false"/>}
+  <div onPointerDown={e=>dn('m',e)} className="absolute border-2 border-ac" style={{left:b[0]*100+'%',top:b[1]*100+'%',width:(b[2]-b[0])*100+'%',height:(b[3]-b[1])*100+'%',boxShadow:'0 0 0 9999px rgba(0,0,0,.5)',touchAction:'none'}}/>
+  {H('tl',{left:b[0]*100+'%',top:b[1]*100+'%'})}{H('tr',{left:b[2]*100+'%',top:b[1]*100+'%'})}{H('bl',{left:b[0]*100+'%',top:b[3]*100+'%'})}{H('br',{left:b[2]*100+'%',top:b[3]*100+'%'})}
+  {H('t',{left:(b[0]+b[2])*50+'%',top:b[1]*100+'%'})}{H('b',{left:(b[0]+b[2])*50+'%',top:b[3]*100+'%'})}{H('l',{left:b[0]*100+'%',top:(b[1]+b[3])*50+'%'})}{H('r',{left:b[2]*100+'%',top:(b[1]+b[3])*50+'%'})}</div>
+  <div className="flex gap-2 mt-3 text-sm"><button onClick={()=>done(b)} className="px-3 py-1.5 rounded-lg bg-ac text-bg">이 영역으로 자르기</button><button onClick={close} className="px-3 py-1.5 rounded-lg border border-bd">취소</button></div></div>};
+const GViewer=({it,list,i,setI,close,upd,run,busy,o,box,unbox})=>{const g=list[i];const u=useImg(g.id,g.v);const [m,setM]=S(typeof g.scan==='string'?g.scan:'scan');const [ce,setCe]=S(false);
+ const up=p=>upd(it.id,x=>({gal:x.gal.map(a=>a.id===g.id?{...a,...p}:a)}));
+ const del=async()=>{if(!confirm('이 이미지를 삭제할까요?'))return;await gDel(g.id);await gDel(g.id+'o');upd(it.id,x=>({gal:x.gal.filter(a=>a.id!==g.id)}));list.length>1?setI(Math.max(0,i-1)):close()};
+ const B='px-3 py-1.5 rounded-lg border border-bd disabled:opacity-40';
  return <div className="fade fixed inset-0 z-[50] bg-bg overflow-auto" style={{paddingTop:'env(safe-area-inset-top)'}}><div className="max-w-3xl mx-auto px-4 pb-10">
   <div className="sticky top-0 bg-bg z-10 flex items-center gap-1 h-12"><button onClick={close} aria-label="닫기"><Ic n="x"/></button><span className="flex-1 text-center text-sm text-mu">{i+1} / {list.length}</span>
-   <button disabled={i<1} onClick={()=>setI(i-1)} className="w-9 h-9 flex items-center justify-center disabled:opacity-30"><Ic n="cl"/></button>
-   <button disabled={i>=list.length-1} onClick={()=>setI(i+1)} className="w-9 h-9 flex items-center justify-center disabled:opacity-30 rotate-180"><Ic n="cl"/></button></div>
-  <div className="rounded-lg border border-bd bg-sf overflow-auto max-h-[60vh] flex justify-center">{u&&<img src={u} alt="" className="max-w-full"/>}</div>
+   <button disabled={i<1||ce} onClick={()=>setI(i-1)} className="w-9 h-9 flex items-center justify-center disabled:opacity-30"><Ic n="cl"/></button>
+   <button disabled={i>=list.length-1||ce} onClick={()=>setI(i+1)} className="w-9 h-9 flex items-center justify-center disabled:opacity-30 rotate-180"><Ic n="cl"/></button></div>
+  {ce?<CropEd key={g.id} g={g} close={()=>setCe(false)} done={async b=>{setCe(false);await box(g,b)}}/>:<>
+  <div className="rounded-lg border border-bd bg-sf flex justify-center">{u&&<img src={u} alt="" className="max-w-full"/>}</div>
   <textarea rows="3" className="memo-f mt-3" placeholder="이 이미지 메모" value={g.text||''} onChange={e=>up({text:e.target.value})}/>
   <div className="flex items-center gap-2 flex-wrap text-xs text-mu mt-2">진도{PF(it.type).map(([k,pl])=><input key={k} placeholder={pl} value={g.pos?.[k]||''} onChange={e=>up({pos:{...g.pos,[k]:e.target.value}})} className="!w-20 !py-1"/>)}<span className="ml-auto">{fmtT(g.t)} · {Math.round((g.sz||0)/1024)}KB</span></div>
-  <div className="flex flex-wrap gap-2 mt-3 text-sm">
-   <button disabled={busy} onClick={()=>run('enh',[g])} className="px-3 py-1.5 rounded-lg border border-bd disabled:opacity-40">{g.scan?'다시 ':''}흑백 스캔 보정</button>
-   <button disabled={busy} onClick={()=>run('ocr',[g])} className="px-3 py-1.5 rounded-lg border border-bd disabled:opacity-40">글자 추출 → 메모{g.nid?' (갱신)':''}</button>
-   <button onClick={del} className="px-3 py-1.5 text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button></div></div></div>};
-const Gallery=({it,upd})=>{const gal=it.gal||[];const [pg,setPg]=S(null);const [o,setO]=S({scan:true,ocr:false});const [mode,setMode]=S(false);const [sel,setSel]=S({});const [vi,setVi]=S(null);const [err,setErr]=S('');
+  <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
+   <select className="!w-auto" value={m} onChange={e=>setM(e.target.value)}>{MODES.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
+   <button disabled={busy} onClick={()=>run('enh',[g],{...o,mode:m})} className={B}>보정 적용</button>
+   <button disabled={busy} onClick={()=>run('crop',[g])} className={B}>글자 영역 자동 자르기</button>
+   <button disabled={busy} onClick={()=>setCe(true)} className={B}>박스 편집</button>
+   {!!g.hasO&&<button disabled={busy} onClick={()=>unbox(g)} className={B}>자르기 해제</button>}
+   <button disabled={busy} onClick={()=>run('ocr',[g])} className={B}>글자 추출 → 메모{g.nid?' (갱신)':''}</button>
+   <button onClick={del} className="px-3 py-1.5 text-mu flex items-center gap-1"><Ic n="tr" s={15}/>삭제</button></div>
+  <p className="text-[11px] text-mu mt-2">원본으로 되돌릴 수는 없어요(보정본만 저장). 흑백→컬러 변환은 불가해요.</p></>}</div></div>};
+const Gallery=({it,upd})=>{const gal=it.gal||[];const [pg,setPg]=S(null);const [o,setO]=S({mode:'scan',desk:true,crop:false,ocr:false});const [mode,setMode]=S(false);const [sel,setSel]=S({});const [vi,setVi]=S(null);const [err,setErr]=S('');
  const ids=Object.keys(sel).filter(k=>sel[k]);
  const toMemo=(id,text,pos)=>upd(it.id,x=>{const base=x.notes||(x.note?[{id:'n0',t:x.added||Date.now(),text:x.note}]:[]);const g=(x.gal||[]).find(a=>a.id===id);const nid=g&&g.nid;
-  const has=nid&&base.some(n=>n.id===nid);const n2=nid&&has?nid:uid();
+  const has=nid&&base.some(n=>n.id===nid);const n2=has?nid:uid();
   return{note:'',notes:has?base.map(n=>n.id===n2?{...n,text,edited:1}:n):[...base,{id:n2,t:Date.now(),text,pos:pos&&Object.values(pos).some(Boolean)?pos:null}],gal:(x.gal||[]).map(a=>a.id===id?{...a,ocr:1,nid:n2}:a)}});
- /* 하나씩 처리하며 진행률 표시. job: add(파일 올리기)/enh(보정)/ocr(글자 추출) */
+ const patch=(id,p)=>upd(it.id,x=>({gal:x.gal.map(z=>z.id===id?{...z,...p,v:(z.v||1)+1}:z)}));
+ const save=async(g,r)=>{await gPut(g.id,r.main);r.full?await gPut(g.id+'o',r.full):await gDel(g.id+'o');patch(g.id,{scan:r.sc?(g.scan&&typeof g.scan==='string'&&g.scan||'scan'):0,sz:r.main.size,box:r.box||undefined,hasO:r.full?1:0})};
  const run=async(job,arr,opt=o)=>{setErr('');setPg({i:0,n:arr.length,m:''});
-  try{for(let k=0;k<arr.length;k++){const a=arr[k],P=m=>setPg({i:k+1,n:arr.length,m});P('');
-   if(job==='add'){const b=await prep(a,opt.scan);const id=uid();await gPut(id,b);const g={id,t:Date.now(),scan:opt.scan?1:0,sz:b.size,v:1};upd(it.id,x=>({gal:[...(x.gal||[]),g]}));
-    if(opt.ocr){P('글자 인식');const t=await ocr(b,m=>m.status==='recognizing text'&&P('글자 인식 '+Math.round(m.progress*100)+'%'));if(t)toMemo(id,t,null)}}
-   else if(job==='enh'){P('보정');const b=await prep(await gGet(a.id),true);await gPut(a.id,b);upd(it.id,x=>({gal:x.gal.map(z=>z.id===a.id?{...z,scan:1,sz:b.size,v:(z.v||1)+1}:z)}))}
-   else{P('글자 인식');const t=await ocr(await gGet(a.id),m=>m.status==='recognizing text'&&P('글자 인식 '+Math.round(m.progress*100)+'%'));if(t)toMemo(a.id,t,a.pos);else setErr('인식된 글자가 없어요')}}}
+  try{for(let k=0;k<arr.length;k++){const a=arr[k],P=m=>setPg({i:k+1,n:arr.length,m}),oc=async b=>{P('글자 인식');return ocr(b,m=>m.status==='recognizing text'&&P('글자 인식 '+Math.round(m.progress*100)+'%'))};P('');
+   if(job==='add'){const r=await proc(a,{mode:opt.mode,desk:opt.desk,crop:opt.crop});const id=uid();await gPut(id,r.main);if(r.full)await gPut(id+'o',r.full);
+    const g={id,t:Date.now(),scan:opt.mode==='orig'?0:opt.mode,sz:r.main.size,v:1,box:r.box||undefined,hasO:r.full?1:0};upd(it.id,x=>({gal:[...(x.gal||[]),g]}));if(opt.ocr){const t=await oc(r.main);if(t)toMemo(id,t,null)}}
+   else if(job==='enh'){P('보정');const src=(await gGet(a.id+'o'))||await gGet(a.id);await save({...a,scan:opt.mode==='orig'?0:opt.mode},await proc(src,{mode:opt.mode,desk:opt.desk,crop:!!a.box,box:a.box}))}
+   else if(job==='crop'){P('글자 영역 찾는 중');const src=(await gGet(a.id+'o'))||await gGet(a.id);const r=await proc(src,{mode:a.scan?'scan':'orig',keep:true,crop:true});if(r.box)await save(a,r);else setErr('글자 영역을 찾지 못했거나 이미 꽉 차 있어요. 박스 편집으로 직접 지정해 보세요')}
+   else{const t=await oc(await gGet(a.id));if(t)toMemo(a.id,t,a.pos);else setErr('인식된 글자가 없어요')}}}
   catch(e){setErr(e.message||String(e))}setPg(null)};
- const bdel=async()=>{if(!confirm(ids.length+'장을 삭제할까요?'))return;for(const i of ids)await gDel(i);upd(it.id,x=>({gal:x.gal.filter(a=>!sel[a.id])}));setSel({});setMode(false)};
+ const box=async(g,b)=>{setErr('');setPg({i:1,n:1,m:'자르는 중'});try{const full=(await gGet(g.id+'o'))||await gGet(g.id);const c=await loadCv(full),sc=!!g.scan,m=await encode(cropCv(c,b),sc);await gPut(g.id+'o',full);await gPut(g.id,m);patch(g.id,{sz:m.size,box:b,hasO:1})}catch(e){setErr(e.message||String(e))}setPg(null)};
+ const unbox=async g=>{const f=await gGet(g.id+'o');if(!f)return;await gPut(g.id,f);await gDel(g.id+'o');patch(g.id,{sz:f.size,box:undefined,hasO:0})};
+ const bdel=async()=>{if(!confirm(ids.length+'장을 삭제할까요?'))return;for(const i of ids){await gDel(i);await gDel(i+'o')}upd(it.id,x=>({gal:x.gal.filter(a=>!sel[a.id])}));setSel({});setMode(false)};
  const pick=g=>{if(mode)setSel({...sel,[g.id]:!sel[g.id]});else setVi(gal.findIndex(a=>a.id===g.id))};
- const chosen=gal.filter(g=>sel[g.id]);
+ const chosen=gal.filter(g=>sel[g.id]);const ck=(k,l)=><label className="flex items-center gap-1.5"><input type="checkbox" className="!w-auto" checked={o[k]} onChange={e=>setO({...o,[k]:e.target.checked})}/>{l}</label>;
  return <div>
   <div className="rounded-lg border border-bd p-3 space-y-2">
-   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm"><label className="flex items-center gap-1.5"><input type="checkbox" className="!w-auto" checked={o.scan} onChange={e=>setO({...o,scan:e.target.checked})}/>흑백 스캔 보정</label>
-    <label className="flex items-center gap-1.5"><input type="checkbox" className="!w-auto" checked={o.ocr} onChange={e=>setO({...o,ocr:e.target.checked})}/>글자 추출 → 메모 저장 (한·영)</label></div>
+   <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm"><select className="!w-auto" value={o.mode} onChange={e=>setO({...o,mode:e.target.value})}>{MODES.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
+    {ck('desk','기울기 자동 보정')}{ck('crop','글자 영역 자동 자르기')}{ck('ocr','글자 추출 → 메모 (한·영)')}</div>
    <label className="block text-center py-2 rounded-lg bg-ac text-bg text-sm cursor-pointer"><input type="file" accept="image/*" multiple className="hidden" disabled={!!pg} onChange={e=>{const f=[...e.target.files];e.target.value='';f.length&&run('add',f)}}/>사진·스크린샷 올리기 (여러 장 가능)</label>
-   <p className="text-[11px] text-mu">올릴 때 긴 변 1600px 이하로 줄이고 WebP로 압축해요. 글자 추출은 처음에 한·영 데이터를 내려받아요.</p></div>
+   <p className="text-[11px] text-mu">해상도·비율은 그대로 두고 WebP로 압축해요. 위 옵션은 올릴 때와 선택 모드의 ‘보정’에 쓰여요. 글자 추출은 처음에 한·영 데이터를 내려받아요.</p></div>
   {pg&&<div className="mt-2 text-sm text-ac">처리 중 {pg.i}/{pg.n} {pg.m}</div>}{err&&<div className="mt-2 text-sm text-red-600">{err}</div>}
   <div className="flex items-center justify-between mt-3 text-sm"><span className="text-mu">{gal.length}장</span>{gal.length>0&&<button onClick={()=>{setMode(!mode);setSel({})}} className={mode?'text-ac':'text-mu'}>{mode?'선택 끝':'선택'}</button>}</div>
   {!gal.length&&<p className="text-sm text-mu py-6 text-center">아직 이미지가 없어요</p>}
-  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">{gal.map(g=><GThumb key={g.id} g={g} sel={!!sel[g.id]} pick={()=>pick(g)}/>)}</div>
+  <div className="columns-3 sm:columns-4 gap-2 mt-2">{gal.map(g=><GThumb key={g.id} g={g} sel={!!sel[g.id]} pick={()=>pick(g)}/>)}</div>
   {mode&&<div className="fixed inset-x-0 bottom-0 z-[45] bg-bg border-t border-bd px-3 py-2 flex items-center gap-2 text-sm" style={{paddingBottom:'calc(8px + env(safe-area-inset-bottom))'}}>
    <button onClick={()=>setSel(Object.fromEntries(gal.map(g=>[g.id,1])))} className="text-mu">전체</button><span className="text-mu">{ids.length}장</span><span className="flex-1"/>
-   <button disabled={!ids.length||!!pg} onClick={()=>run('enh',chosen)} className="px-2 py-1 rounded border border-bd disabled:opacity-40">보정</button>
-   <button disabled={!ids.length||!!pg} onClick={()=>run('ocr',chosen)} className="px-2 py-1 rounded border border-bd disabled:opacity-40">글자 추출</button>
-   <button disabled={!ids.length||!!pg} onClick={bdel} className="px-2 py-1 rounded border border-bd disabled:opacity-40">삭제</button></div>}
-  {vi!==null&&gal[vi]&&<GViewer it={it} list={gal} i={vi} setI={setVi} close={()=>setVi(null)} upd={upd} run={run} busy={!!pg}/>}
-</div>};
+   {[['보정',()=>run('enh',chosen)],['자르기',()=>run('crop',chosen)],['글자 추출',()=>run('ocr',chosen)],['삭제',bdel]].map(([l,f])=><button key={l} disabled={!ids.length||!!pg} onClick={f} className="px-2 py-1 rounded border border-bd disabled:opacity-40">{l}</button>)}</div>}
+  {vi!==null&&gal[vi]&&<GViewer it={it} list={gal} i={vi} setI={setVi} close={()=>setVi(null)} upd={upd} run={run} busy={!!pg} o={o} box={box} unbox={unbox}/>}</div>};
 
 const DT=[['info','정보'],['det','상세정보'],['memo','메모'],['gal','갤러리'],['rel','관련']];
 const Detail=({it,set,upd,del,close,tab,setTab})=><div className="fade fixed inset-0 z-40 overflow-auto bg-bg" style={tbg(it.type,it.status)}>
@@ -944,7 +1008,7 @@ function App(){
  const set=(it,s)=>{const p={status:s};if(s==='playing'&&!it.startedAt)p.startedAt=today();if(s==='done'){p.finishedAt=it.finishedAt||today();if(!it.startedAt)p.startedAt=p.finishedAt}upd(it.id,p)};
  const add=o=>setDb(d=>({...d,items:[{rating:0,startedAt:'',finishedAt:'',note:'',...o,id:uid(),added:Date.now()},...d.items]}));
  const addList=(lid,iid)=>setDb(d=>({...d,lists:d.lists.map(l=>l.id===lid?{...l,body:(l.body?l.body.replace(/\n?$/,'\n'):'')+'[['+iid+']]\n'}:l)}));
- const del=id=>{const x=db.items.find(i=>i.id===id);(x&&x.gal||[]).forEach(g=>gDel(g.id).catch(()=>{}));del0(id)};const del0=id=>setDb(d=>({...d,items:d.items.filter(i=>i.id!==id).map(i=>i.rel?{...i,rel:i.rel.filter(x=>x!==id)}:i)}));
+ const del=id=>{const x=db.items.find(i=>i.id===id);(x&&x.gal||[]).forEach(g=>{gDel(g.id).catch(()=>{});gDel(g.id+'o').catch(()=>{})});del0(id)};const del0=id=>setDb(d=>({...d,items:d.items.filter(i=>i.id!==id).map(i=>i.rel?{...i,rel:i.rel.filter(x=>x!==id)}:i)}));
  const link=(a,b,on)=>setDb(d=>({...d,items:d.items.map(i=>{const o=i.id===a?b:i.id===b?a:null;return o?{...i,rel:on?[...new Set([...(i.rel||[]),o])]:(i.rel||[]).filter(x=>x!==o)}:i})}));
  const qset=(id,p)=>setDb(d=>{const cur=d.items.find(i=>i.id===id);
   const L=d.items.filter(i=>i.q&&i.id!==id&&i.type===cur.type).sort((a,b)=>a.q.o-b.q.o);
